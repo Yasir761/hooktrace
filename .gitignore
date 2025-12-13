@@ -1,0 +1,69 @@
+# Dependencies
+node_modules/
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Environment files
+.env
+.env.local
+.env.*.local
+.env.production
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+.turbo/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.docker/
+.dockerignore
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Redis
+dump.rdb
+
+# Testing
+.nyc_output/
+coverage/
+*.lcov
+
+# Runtime
+pid
+pids
+*.pid
+*.seed
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# IDE configurations
+.vscode/settings.json
+.idea/workspace.xml
