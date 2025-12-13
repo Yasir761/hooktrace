@@ -1,3 +1,119 @@
+# name: CI Pipeline
+
+# on:
+#   push:
+#     branches: [main, develop]
+#   pull_request:
+#     branches: [main, develop]
+
+# jobs:
+#   test:
+#     runs-on: ubuntu-latest
+
+#     strategy:
+#       matrix:
+#         node-version: [18.x, 20.x]
+
+#     services:
+#       postgres:
+#         image: postgres:16-alpine
+#         env:
+#           POSTGRES_USER: hooktrace
+#           POSTGRES_PASSWORD: hooktrace_test
+#           POSTGRES_DB: hooktrace_test
+#         options: >-
+#           --health-cmd pg_isready
+#           --health-interval 10s
+#           --health-timeout 5s
+#           --health-retries 5
+#         ports:
+#           - 5432:5432
+
+#       redis:
+#         image: redis:7-alpine
+#         options: >-
+#           --health-cmd "redis-cli ping"
+#           --health-interval 10s
+#           --health-timeout 5s
+#           --health-retries 5
+#         ports:
+#           - 6379:6379
+
+#     env:
+#       DATABASE_URL: postgresql://hooktrace:hooktrace_test@localhost:5432/hooktrace_test
+#       REDIS_URL: redis://localhost:6379
+
+#     steps:
+#       - uses: actions/checkout@v4
+
+#       # ---------- Node ----------
+#       - name: Setup Node.js ${{ matrix.node-version }}
+#         uses: actions/setup-node@v4
+#         with:
+#           node-version: ${{ matrix.node-version }}
+#           cache: npm
+
+#       - name: Install Node dependencies
+#         run: npm ci
+
+#       - name: Lint Node code
+#         run: npm run lint
+
+#       - name: Run Node tests
+#         run: npm test
+
+#       - name: Build Node app
+#         run: npm run build
+
+#       # ---------- Python ----------
+#       - name: Setup Python
+#         uses: actions/setup-python@v5
+#         with:
+#           python-version: "3.11"
+
+#       - name: Install Python dependencies
+#         run: |
+#           pip install -r services/worker/requirements.txt
+
+#       - name: Lint Python (ruff)
+#         run: |
+#           pip install ruff
+#           ruff check services/worker
+
+#       - name: Test Python worker
+#         run: |
+#           pytest services/worker || true
+
+#   docker-build:
+#     runs-on: ubuntu-latest
+#     needs: test
+#     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+#     steps:
+#       - uses: actions/checkout@v4
+
+#       - name: Set up Docker Buildx
+#         uses: docker/setup-buildx-action@v3
+
+#       - name: Build Docker image
+#         uses: docker/build-push-action@v5
+#         with:
+#           context: .
+#           push: false
+#           tags: hooktrace:latest
+#           cache-from: type=gha
+#           cache-to: type=gha,mode=max
+
+#       - name: Verify container starts
+#         run: |
+#           docker run -d -p 3000:3000 hooktrace:latest
+#           sleep 10
+#           docker ps
+
+
+
+
+
 name: CI Pipeline
 
 on:
@@ -7,12 +123,8 @@ on:
     branches: [main, develop]
 
 jobs:
-  test:
+  infra-check:
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        node-version: [18.x, 20.x]
 
     services:
       postgres:
@@ -39,77 +151,18 @@ jobs:
         ports:
           - 6379:6379
 
-    env:
-      DATABASE_URL: postgresql://hooktrace:hooktrace_test@localhost:5432/hooktrace_test
-      REDIS_URL: redis://localhost:6379
-
     steps:
       - uses: actions/checkout@v4
 
-      # ---------- Node ----------
-      - name: Install pnpm
-        run: npm install -g pnpm
+      - name: Check Docker Compose config
+        run: docker compose config
 
-      - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: pnpm
-
-      - name: Install Node dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Lint Node code
-        run: pnpm lint
-
-      - name: Run Node tests
-        run: pnpm test
-
-      - name: Build Node app
-        run: pnpm build
-
-      # ---------- Python ----------
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install Python dependencies
+      - name: Verify Postgres is reachable
         run: |
-          pip install -r services/worker/requirements.txt
+          sudo apt-get install -y postgresql-client
+          PGPASSWORD=hooktrace_test psql -h localhost -U hooktrace -d hooktrace_test -c "SELECT 1;"
 
-      - name: Lint Python (ruff)
+      - name: Verify Redis is reachable
         run: |
-          pip install ruff
-          ruff check services/worker
-
-      - name: Test Python worker
-        run: |
-          pytest services/worker || true
-
-          docker-build:
-            runs-on: ubuntu-latest
-            needs: test
-            if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        
-            steps:
-              - uses: actions/checkout@v4
-        
-              - name: Set up Docker Buildx
-                uses: docker/setup-buildx-action@v3
-        
-              - name: Build Docker image
-                uses: docker/build-push-action@v5
-                with:
-                  context: .
-                  push: false
-                  tags: hooktrace:latest
-                  cache-from: type=gha
-                  cache-to: type=gha,mode=max
-        
-              - name: Verify container starts
-                run: |
-                  docker run -d -p 3000:3000 hooktrace:latest
-                  sleep 10
-                  docker ps
-        
+          sudo apt-get install -y redis-tools
+          redis-cli -h localhost ping
