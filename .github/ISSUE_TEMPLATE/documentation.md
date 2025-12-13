@@ -1,31 +1,25 @@
 ---
-name: Documentation
-about: Suggest improvements or report missing documentation
-title: "[DOCS] "
+name:  Documentation Improvement
+about: Report missing, unclear, or incorrect documentation
+title: "[DOCS] <short description>"
 labels: documentation
 assignees: ""
 ---
 
-## Documentation Section
+##  Documentation Area
+<!-- README, API docs, setup guide, examples, etc. -->
 
-<!-- Which part of the documentation needs improvement? -->
+##  Problem / Gap
+<!-- What is missing, unclear, or incorrect? -->
 
-## Current Content
+##  Current Content
+<!-- What does the documentation currently say? -->
 
-<!-- What does the current documentation say? -->
+##  Suggested Improvement
+<!-- How should it be improved? -->
 
-## What's Missing or Unclear?
+##  Related Links
+<!-- Links to docs or code -->
 
-<!-- Be specific about what's confusing or missing -->
-
-## Suggested Improvement
-
-<!-- How would you improve the documentation? Be as detailed as possible -->
-
-## Related Documentation Links
-
-<!-- Links to relevant docs or code -->
-
-## Additional Context
-
-<!-- Add any other context that might be helpful -->
+## ℹ Additional Context
+<!-- Screenshots, examples, references -->
