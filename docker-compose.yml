@@ -1,4 +1,167 @@
-version: "3.9"
+# version: "3.9"
+
+# services:
+#   postgres:
+#     image: postgres:16-alpine
+#     container_name: hooktrace-db
+#     environment:
+#       POSTGRES_USER: hooktrace
+#       POSTGRES_PASSWORD: hooktrace_dev
+#       POSTGRES_DB: hooktrace
+#     ports:
+#       - "5432:5432"
+#     volumes:
+#       - postgres_data:/var/lib/postgresql/data
+#     healthcheck:
+#       test: ["CMD-SHELL", "pg_isready -U hooktrace"]
+#       interval: 10s
+#       timeout: 5s
+#       retries: 5
+#     restart: unless-stopped
+
+#   redis:
+#     image: redis:7-alpine
+#     container_name: hooktrace-redis
+#     ports:
+#       - "6379:6379"
+#     volumes:
+#       - redis_data:/data
+#     healthcheck:
+#       test: ["CMD", "redis-cli", "ping"]
+#       interval: 10s
+#       timeout: 5s
+#       retries: 5
+#     restart: unless-stopped
+
+#   api:
+#     build:
+#       context: .
+#       dockerfile: services/api/dockerfile
+#       target: api
+#     container_name: hooktrace-api
+#     environment:
+#       ENV: development
+#       DATABASE_URL: postgresql://hooktrace:hooktrace_dev@postgres:5432/hooktrace
+#       REDIS_URL: redis://redis:6379
+#     ports:
+#       - "3001:3001"
+#     depends_on:
+#       postgres:
+#         condition: service_healthy
+#       redis:
+#         condition: service_healthy
+#     volumes:
+#       - ./services/api:/app/services/api
+#     command: uvicorn app.main:app --host 0.0.0.0 --port 3001 --reload
+#     restart: unless-stopped
+
+#   worker:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#       target: worker
+#     container_name: hooktrace-worker
+#     environment:
+#       DATABASE_URL: postgresql://hooktrace:hooktrace_dev@postgres:5432/hooktrace
+#       REDIS_URL: redis://redis:6379
+#     depends_on:
+#       postgres:
+#         condition: service_healthy
+#       redis:
+#         condition: service_healthy
+#     volumes:
+#       - ./services/worker:/app/services/worker
+#     command: celery -A worker.celery_app worker --loglevel=info
+#     restart: unless-stopped
+
+#   dashboard:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#       target: dashboard
+#     container_name: hooktrace-dashboard
+#     environment:
+#       NODE_ENV: development
+#       NEXT_PUBLIC_API_URL: http://api:3001
+#     ports:
+#       - "3000:3000"
+#     depends_on:
+#       - api
+#     volumes:
+#       - ./web:/app/web
+#     command: pnpm dev
+#     restart: unless-stopped
+
+# volumes:
+#   postgres_data:
+#   redis_data:
+
+# networks:
+#   default:
+#     name: hooktrace-network
+
+
+
+
+
+
+
+# services:
+#   postgres:
+#     image: postgres:16-alpine
+#     container_name: hooktrace-db
+#     environment:
+#       POSTGRES_USER: hooktrace
+#       POSTGRES_PASSWORD: hooktrace_dev
+#       POSTGRES_DB: hooktrace
+#     ports:
+#       - "5432:5432"
+#     volumes:
+#       - postgres_data:/var/lib/postgresql/data
+#     healthcheck:
+#       test: ["CMD-SHELL", "pg_isready -U hooktrace"]
+#       interval: 10s
+#       timeout: 5s
+#       retries: 5
+
+#   redis:
+#     image: redis:7-alpine
+#     container_name: hooktrace-redis
+#     ports:
+#       - "6379:6379"
+#     volumes:
+#       - redis_data:/data
+#     healthcheck:
+#       test: ["CMD", "redis-cli", "ping"]
+#       interval: 10s
+#       timeout: 5s
+#       retries: 5
+
+#   api:
+#     build:
+#       context: .
+#       dockerfile: services/api/Dockerfile   # ✅ CORRECT PATH
+#     container_name: hooktrace-api
+#     environment:
+#       DATABASE_URL: postgresql://hooktrace:hooktrace_dev@postgres:5432/hooktrace
+#     ports:
+#       - "3001:3001"
+#     depends_on:
+#       postgres:
+#         condition: service_healthy
+#       redis:
+#         condition: service_healthy
+
+
+
+
+
+
+
+
+
+
+
 
 services:
   postgres:
@@ -9,7 +172,7 @@ services:
       POSTGRES_PASSWORD: hooktrace_dev
       POSTGRES_DB: hooktrace
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -17,7 +180,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
@@ -31,18 +193,14 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
 
   api:
     build:
-      context: .
+      context: services/api
       dockerfile: Dockerfile
-      target: api
     container_name: hooktrace-api
     environment:
-      ENV: development
       DATABASE_URL: postgresql://hooktrace:hooktrace_dev@postgres:5432/hooktrace
-      REDIS_URL: redis://redis:6379
     ports:
       - "3001:3001"
     depends_on:
@@ -50,52 +208,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    volumes:
-      - ./services/api:/app/services/api
-    command: uvicorn app.main:app --host 0.0.0.0 --port 3001 --reload
-    restart: unless-stopped
-
-  worker:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: worker
-    container_name: hooktrace-worker
-    environment:
-      DATABASE_URL: postgresql://hooktrace:hooktrace_dev@postgres:5432/hooktrace
-      REDIS_URL: redis://redis:6379
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    volumes:
-      - ./services/worker:/app/services/worker
-    command: celery -A worker.celery_app worker --loglevel=info
-    restart: unless-stopped
-
-  dashboard:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: dashboard
-    container_name: hooktrace-dashboard
-    environment:
-      NODE_ENV: development
-      NEXT_PUBLIC_API_URL: http://api:3001
-    ports:
-      - "3000:3000"
-    depends_on:
-      - api
-    volumes:
-      - ./web:/app/web
-    command: pnpm dev
-    restart: unless-stopped
 
 volumes:
   postgres_data:
   redis_data:
-
-networks:
-  default:
-    name: hooktrace-network
