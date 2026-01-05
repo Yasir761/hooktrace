@@ -2,6 +2,8 @@ from fastapi import APIRouter, Request, status
 from sqlalchemy.orm import Session
 from database import SessionLocal
 from models import WebhookEvent
+from redis_client import redis_client
+
 
 router = APIRouter()
 
@@ -21,6 +23,8 @@ async def relay(token: str, route: str, request: Request):
         )
         db.add(event)
         db.commit()
+        db.refresh(event)
+        redis_client.lpush("webhook:queue", event.id.to_bytes(8, "big"))
     finally:
         db.close()
 
