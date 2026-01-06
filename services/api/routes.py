@@ -24,7 +24,7 @@ async def relay(token: str, route: str, request: Request):
         db.add(event)
         db.commit()
         db.refresh(event)
-        redis_client.lpush("webhook:queue", event.id.to_bytes(8, "big"))
+        redis_client.lpush("webhook:queue", str(event.id))
     finally:
         db.close()
 
