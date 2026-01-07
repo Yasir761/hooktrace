@@ -162,7 +162,6 @@
 
 
 
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -208,6 +207,21 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+
+  worker:
+    build:
+      context: services/worker
+      dockerfile: Dockerfile
+    container_name: hooktrace-worker
+    environment:
+      DATABASE_URL: postgresql://hooktrace:hooktrace_dev@postgres:5432/hooktrace
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   postgres_data:

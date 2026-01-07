@@ -9,6 +9,38 @@ router = APIRouter()
 
 @router.post("/r/{token}/{route}", status_code=status.HTTP_202_ACCEPTED)
 async def relay(token: str, route: str, request: Request):
+    body = await request.body()
+
+    if body:
+        try:
+            payload = await request.json()
+        except Exception:
+            payload = body.decode(errors="ignore")
+    else:
+        payload = None
+
+    headers = {k: v for k, v in request.headers.items()}
+
+
+    db: Session = SessionLocal()
+    try:
+        event = WebhookEvent(
+            token=token,
+            route=route,
+            headers=headers,
+            payload=payload,
+            status="pending",
+        )
+        db.add(event)
+        db.commit()
+        db.refresh(event)
+
+        redis_client.lpush("webhook:queue", str(event.id))
+    finally:
+        db.close()
+
+    return {"accepted": True}
+
     payload = await request.json()
     headers = dict(request.headers)
 
