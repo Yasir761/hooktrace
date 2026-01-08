@@ -20,7 +20,7 @@ async def relay(token: str, route: str, request: Request):
         payload = None
 
     headers = {k: v for k, v in request.headers.items()}
-
+ 
 
     db: Session = SessionLocal()
     try:
