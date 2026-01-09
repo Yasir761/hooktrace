@@ -11,4 +11,5 @@ class WebhookEvent(Base):
     headers = Column(JSON, nullable=False)
     payload = Column(JSON, nullable=False)
     status = Column(String, default="pending", index=True)
+    idempotency_key = Column(String, nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
