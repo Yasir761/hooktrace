@@ -9,12 +9,20 @@ from models import WebhookEvent
 from redis_client import redis_client
 from security import verify_signature
 
+
+from metrics import (
+    webhooks_received,
+    webhooks_deduplicated,
+    webhooks_invalid_signature,
+)
+
+
 router = APIRouter()
 
 
 @router.post("/r/{token}/{route}", status_code=status.HTTP_202_ACCEPTED)
 async def relay(token: str, route: str, request: Request):
-    # 1️⃣ Read raw body ONCE
+    #  Read raw body ONCE
     raw_body = await request.body()
 
     try:
@@ -47,6 +55,7 @@ async def relay(token: str, route: str, request: Request):
                 )
 
             if not verify_signature(route_secret, raw_body, signature):
+                webhooks_invalid_signature.inc()
                 return JSONResponse(
                     status_code=401,
                     content={"detail": "Invalid signature"},
@@ -62,9 +71,15 @@ async def relay(token: str, route: str, request: Request):
             idempotency_key=idempotency_key,
         )
 
+        
+
+
         db.add(event)
         db.commit()
         db.refresh(event)
+
+        webhooks_received.labels(token=token, route=route).inc()
+
 
         redis_client.lpush("webhook:queue", str(event.id))
 
@@ -72,6 +87,7 @@ async def relay(token: str, route: str, request: Request):
 
     except IntegrityError:
         db.rollback()
+        webhooks_deduplicated.inc()
         return {"accepted": True, "deduplicated": True}
 
     finally:

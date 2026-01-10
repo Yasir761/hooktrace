@@ -7,14 +7,21 @@ from sqlalchemy import text
 from database import SessionLocal
 from redis_client import redis_client
 
+from prometheus_client import start_http_server
+
+from metrics import (
+    events_delivered,
+    events_failed,
+    events_retried,
+    delivery_latency,
+)
+
 QUEUE_MAIN = "webhook:queue"
 QUEUE_RETRY = "webhook:retry"
 QUEUE_DLQ = "webhook:dlq"
 
 BASE_DELAY_SECONDS = 5
 
-
-QUEUE_NAME = "webhook:queue"
 
 def deliver_event(event_id: int):
     db = SessionLocal()
@@ -31,12 +38,14 @@ def deliver_event(event_id: int):
         destination_url = "https://httpbin.org/post"
 
         try:
-            resp = requests.post(
-                destination_url,
-                json=event["payload"],
-                headers=event["headers"],
-                timeout=10,
-            )
+            # Measure delivery latency
+            with delivery_latency.time():
+                resp = requests.post(
+                    destination_url,
+                    json=event["payload"],
+                    headers=event["headers"],
+                    timeout=10,
+                )
 
             if resp.status_code < 300:
                 db.execute(
@@ -48,6 +57,8 @@ def deliver_event(event_id: int):
                     {"id": event_id},
                 )
                 db.commit()
+
+                events_delivered.inc()
                 print(f"[worker] Event {event_id} → delivered")
                 return
 
@@ -59,6 +70,7 @@ def deliver_event(event_id: int):
 
             if attempt < max_retries:
                 print(f"[worker] Event {event_id} retry {attempt}/{max_retries}")
+
                 db.execute(
                     text("""
                         UPDATE webhook_events
@@ -67,10 +79,14 @@ def deliver_event(event_id: int):
                     """),
                     {"error": str(e), "id": event_id},
                 )
+
                 schedule_retry(db, event_id, attempt)
                 redis_client.lpush(QUEUE_RETRY, str(event_id))
+                events_retried.inc()
+
             else:
                 print(f"[worker] Event {event_id} → DLQ")
+
                 db.execute(
                     text("""
                         UPDATE webhook_events
@@ -80,10 +96,13 @@ def deliver_event(event_id: int):
                     {"error": str(e), "id": event_id},
                 )
                 db.commit()
+
                 redis_client.lpush(QUEUE_DLQ, str(event_id))
+                events_failed.inc()
 
     finally:
         db.close()
+
 
 def schedule_retry(db, event_id: int, attempt: int):
     delay = BASE_DELAY_SECONDS * (2 ** (attempt - 1))
@@ -105,6 +124,7 @@ def schedule_retry(db, event_id: int, attempt: int):
         },
     )
     db.commit()
+
 
 def retry_scheduler():
     print("[worker] retry scheduler started")
@@ -142,13 +162,16 @@ def retry_scheduler():
 def main():
     print("[worker] started, waiting for events...")
 
+    # Expose Prometheus metrics
+    start_http_server(8001)
+    print("[worker] metrics available on :8001/metrics")
+
     Thread(target=retry_scheduler, daemon=True).start()
 
     while True:
         _, event_id = redis_client.brpop(QUEUE_MAIN)
         deliver_event(int(event_id))
 
-    
 
 if __name__ == "__main__":
     main()
