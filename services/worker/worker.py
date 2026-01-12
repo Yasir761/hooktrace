@@ -9,6 +9,8 @@ from redis_client import redis_client
 
 from prometheus_client import start_http_server
 
+
+
 from metrics import (
     events_delivered,
     events_failed,
@@ -21,6 +23,18 @@ QUEUE_RETRY = "webhook:retry"
 QUEUE_DLQ = "webhook:dlq"
 
 BASE_DELAY_SECONDS = 5
+
+import json
+
+def publish_update(event_id: int, status: str, attempt: int = 0):
+    redis_client.publish(
+        "events:updates",
+        json.dumps({
+            "event_id": event_id,
+            "status": status,
+            "attempt_count": attempt,
+        })
+    )
 
 
 def deliver_event(event_id: int):
@@ -59,6 +73,7 @@ def deliver_event(event_id: int):
                 db.commit()
 
                 events_delivered.inc()
+                publish_update(event_id, "delivered", event["attempt_count"])
                 print(f"[worker] Event {event_id} → delivered")
                 return
 
@@ -83,6 +98,7 @@ def deliver_event(event_id: int):
                 schedule_retry(db, event_id, attempt)
                 redis_client.lpush(QUEUE_RETRY, str(event_id))
                 events_retried.inc()
+                publish_update(event_id, "retrying", attempt)
 
             else:
                 print(f"[worker] Event {event_id} → DLQ")
@@ -99,6 +115,7 @@ def deliver_event(event_id: int):
 
                 redis_client.lpush(QUEUE_DLQ, str(event_id))
                 events_failed.inc()
+                publish_update(event_id, "failed", event["attempt_count"])
 
     finally:
         db.close()
