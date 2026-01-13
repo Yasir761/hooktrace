@@ -10,6 +10,7 @@ from redis_client import redis_client
 
 from security import verify_signature
 from providers import stripe as stripe_provider
+from providers import github as github_provider
 
 from metrics import (
     webhooks_received,
@@ -22,11 +23,11 @@ router = APIRouter()
 
 @router.post("/r/{token}/{route}", status_code=status.HTTP_202_ACCEPTED)
 async def relay(token: str, route: str, request: Request):
-    #  Read raw body ONCE (required for Stripe)
+    # Read raw body ONCE (required for Stripe/GitHub)
     raw_body = await request.body()
     request.state.raw_body = raw_body
 
-    #  Parse payload safely
+    # Parse payload safely
     try:
         payload = await request.json()
     except Exception:
@@ -36,15 +37,17 @@ async def relay(token: str, route: str, request: Request):
     idempotency_key = request.headers.get("idempotency-key")
     signature = request.headers.get("x-signature")
 
-    #  Detect provider
+    # Detect provider
     provider = None
     if "stripe-signature" in request.headers:
         provider = "stripe"
+    elif "x-hub-signature-256" in request.headers:
+        provider = "github"
 
     db: Session = SessionLocal()
 
     try:
-        #  Fetch route secret
+        # Fetch route secret
         route_secret = db.execute(
             text("""
                 SELECT secret FROM webhook_routes
@@ -53,7 +56,7 @@ async def relay(token: str, route: str, request: Request):
             {"token": token, "route": route},
         ).scalar()
 
-        #  Signature validation (ONLY if secret exists)
+        # Signature validation (ONLY if secret exists)
         if route_secret:
             if provider == "stripe":
                 if not stripe_provider.verify(request, route_secret):
@@ -62,7 +65,17 @@ async def relay(token: str, route: str, request: Request):
                         status_code=401,
                         content={"detail": "Invalid Stripe signature"},
                     )
+
+            elif provider == "github":
+                if not github_provider.verify(request, route_secret):
+                    webhooks_invalid_signature.inc()
+                    return JSONResponse(
+                        status_code=401,
+                        content={"detail": "Invalid GitHub signature"},
+                    )
+
             else:
+                # Generic HMAC fallback
                 if not signature:
                     return JSONResponse(
                         status_code=401,
@@ -76,7 +89,7 @@ async def relay(token: str, route: str, request: Request):
                         content={"detail": "Invalid signature"},
                     )
 
-        #  Create event
+        # Create event
         event = WebhookEvent(
             token=token,
             route=route,
@@ -92,7 +105,7 @@ async def relay(token: str, route: str, request: Request):
 
         webhooks_received.labels(token=token, route=route).inc()
 
-        #  Enqueue
+        # Enqueue for worker
         redis_client.lpush("webhook:queue", str(event.id))
 
         return {"accepted": True}
