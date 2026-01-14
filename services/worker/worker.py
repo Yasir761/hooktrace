@@ -49,7 +49,11 @@ def deliver_event(event_id: int):
             print(f"[worker] Event {event_id} not found")
             return
 
-        destination_url = "https://httpbin.org/post"
+        destination_url = event["delivery_target"]
+
+        if not destination_url:
+            print(f"[worker] Event {event_id} has no delivery target")
+            return
 
         try:
             # Measure delivery latency

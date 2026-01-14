@@ -20,14 +20,11 @@ from metrics import (
 
 router = APIRouter()
 
-
 @router.post("/r/{token}/{route}", status_code=status.HTTP_202_ACCEPTED)
 async def relay(token: str, route: str, request: Request):
-    # Read raw body ONCE (required for Stripe/GitHub)
     raw_body = await request.body()
     request.state.raw_body = raw_body
 
-    # Parse payload safely
     try:
         payload = await request.json()
     except Exception:
@@ -37,7 +34,6 @@ async def relay(token: str, route: str, request: Request):
     idempotency_key = request.headers.get("idempotency-key")
     signature = request.headers.get("x-signature")
 
-    # Detect provider
     provider = None
     if "stripe-signature" in request.headers:
         provider = "stripe"
@@ -47,49 +43,43 @@ async def relay(token: str, route: str, request: Request):
     db: Session = SessionLocal()
 
     try:
-        # Fetch route secret
-        route_secret = db.execute(
+        route_config = db.execute(
             text("""
-                SELECT secret FROM webhook_routes
+                SELECT secret, mode, dev_target, prod_target
+                FROM webhook_routes
                 WHERE token = :token AND route = :route
             """),
             {"token": token, "route": route},
-        ).scalar()
+        ).mappings().first()
 
-        # Signature validation (ONLY if secret exists)
+        route_secret = route_config["secret"] if route_config else None
+
+        # ---- Signature validation ----
         if route_secret:
             if provider == "stripe":
                 if not stripe_provider.verify(request, route_secret):
                     webhooks_invalid_signature.inc()
-                    return JSONResponse(
-                        status_code=401,
-                        content={"detail": "Invalid Stripe signature"},
-                    )
+                    return JSONResponse(status_code=401, content={"detail": "Invalid Stripe signature"})
 
             elif provider == "github":
                 if not github_provider.verify(request, route_secret):
                     webhooks_invalid_signature.inc()
-                    return JSONResponse(
-                        status_code=401,
-                        content={"detail": "Invalid GitHub signature"},
-                    )
+                    return JSONResponse(status_code=401, content={"detail": "Invalid GitHub signature"})
 
             else:
-                # Generic HMAC fallback
-                if not signature:
-                    return JSONResponse(
-                        status_code=401,
-                        content={"detail": "Missing signature"},
-                    )
-
-                if not verify_signature(route_secret, raw_body, signature):
+                if not signature or not verify_signature(route_secret, raw_body, signature):
                     webhooks_invalid_signature.inc()
-                    return JSONResponse(
-                        status_code=401,
-                        content={"detail": "Invalid signature"},
-                    )
+                    return JSONResponse(status_code=401, content={"detail": "Invalid signature"})
 
-        # Create event
+        # ---- Resolve delivery target ----
+        delivery_target = None
+        if route_config:
+            delivery_target = (
+                route_config["dev_target"]
+                if route_config["mode"] == "dev"
+                else route_config["prod_target"]
+            )
+
         event = WebhookEvent(
             token=token,
             route=route,
@@ -97,6 +87,7 @@ async def relay(token: str, route: str, request: Request):
             payload=payload,
             status="pending",
             idempotency_key=idempotency_key,
+            delivery_target=delivery_target,
         )
 
         db.add(event)
@@ -105,9 +96,7 @@ async def relay(token: str, route: str, request: Request):
 
         webhooks_received.labels(token=token, route=route).inc()
 
-        # Enqueue for worker
         redis_client.lpush("webhook:queue", str(event.id))
-
         return {"accepted": True}
 
     except IntegrityError:
@@ -117,3 +106,4 @@ async def relay(token: str, route: str, request: Request):
 
     finally:
         db.close()
+

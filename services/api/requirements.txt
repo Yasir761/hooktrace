@@ -4,4 +4,6 @@ sqlalchemy
 psycopg2-binary
 redis
 prometheus-client
+stripe
+
 
