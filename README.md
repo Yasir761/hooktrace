@@ -47,10 +47,9 @@ Visit `http://localhost:3000` and start relaying webhooks!
 ### Local Setup
 
 ```bash
- python -m http.server 3000
-
- # Hooktrace can now forward webhooks directly to:
-http://localhost:3000
+ # python -m http.server 3000
+ Hooktrace can now forward webhooks directly to:
+# http://localhost:3000
 
 
 
