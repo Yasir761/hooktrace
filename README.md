@@ -47,14 +47,13 @@ Visit `http://localhost:3000` and start relaying webhooks!
 ### Local Setup
 
 ```bash
-# Install dependencies
-pnpm install
+ python -m http.server 3000
 
-# Start dev stack
-pnpm dev: stack
+ # Hooktrace can now forward webhooks directly to:
+http://localhost:3000
 
-# In another terminal, start development servers
-pnpm dev
+
+
 ```
 
 ### Project Structure
