@@ -13,8 +13,8 @@
 - **Beautiful Dashboard** - Modern, dark-mode UI built with Next.js
 - **Self-Hosted** - docker-compose, Kubernetes, and managed cloud options
 - **Production Ready** - Postgres persistence, Redis queuing, async workers
-- **AI-Powered Diagnostics** - Get instant explanations for why webhooks failed (Phase 4)
-- **Event Routing** - Forward to HTTP, Kafka, Redis, SQS, RabbitMQ, and more (Phase 3)
+- **AI-Powered Diagnostics** - Get instant explanations for why webhooks failed 
+- **Event Routing** - Forward to HTTP, Kafka, Redis, SQS, RabbitMQ, and more 
 - **Signature Validation** - HMAC signing for webhook security
 - **Dead Letter Queue** - Never lose failed events
 
@@ -123,6 +123,16 @@ API_HOST=0.0.0.0
 NEXT_PUBLIC_API_URL=http://localhost:3001
 DASHBOARD_PORT=3000
 ```
+
+##  Deploy to Railway
+
+Deploy Hooktrace in one click (API + Worker + Postgres + Redis):
+
+[![Deploy on Railway](https://railway.app/button.svg)](
+  https://railway.app/new/template?template=https://github.com/<your-username>/hooktrace
+)
+
+Replace <your-username>
 
 ## Contributing
 

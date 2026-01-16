@@ -1,0 +1,18 @@
+{
+    "$schema": "https://railway.app/railway.schema.json",
+    "services": [
+      {
+        "name": "api",
+        "source": {
+          "dockerfile": "services/api/Dockerfile"
+        }
+      },
+      {
+        "name": "worker",
+        "source": {
+          "dockerfile": "services/worker/Dockerfile"
+        }
+      }
+    ]
+  }
+  
