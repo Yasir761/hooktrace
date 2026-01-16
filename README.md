@@ -38,7 +38,7 @@ Visit `http://localhost:3000` and start relaying webhooks!
 ### System Requirements
 
 - Docker & Docker Compose 2.0+
-- Node.js 18+ (for local development)
+- Python (for local development)
 - PostgreSQL 14+ (or use docker-compose)
 - Redis 7+ (or use docker-compose)
 
@@ -47,14 +47,12 @@ Visit `http://localhost:3000` and start relaying webhooks!
 ### Local Setup
 
 ```bash
-# Install dependencies
-pnpm install
+ # python -m http.server 3000
+ Hooktrace can now forward webhooks directly to:
+# http://localhost:3000
 
-# Start dev stack
-pnpm dev:stack
 
-# In another terminal, start development servers
-pnpm dev
+
 ```
 
 ### Project Structure
@@ -73,7 +71,7 @@ hooktrace/
 
 ## Phase Roadmap
 
-### Phase 1: MVP (Core) ✅ In Progress
+### Phase 1: MVP (Core) 
 - [x] Public relay endpoints
 - [x] Event persistence & queuing
 - [x] Async worker with retries
@@ -83,17 +81,17 @@ hooktrace/
 - [ ] EKS deployment docs
 
 ### Phase 2: Reliability & UX
-- [ ] Dead Letter Queue
-- [ ] Manual replay button
-- [ ] WebSocket live updates
-- [ ] Idempotency key support
-- [ ] Webhook signature validation
-- [ ] Prometheus metrics
-- [ ] Audit logs
+- [x] Dead Letter Queue
+- [x] Manual replay button
+- [x] WebSocket live updates
+- [x] Idempotency key support
+- [x] Webhook signature validation
+- [x] Prometheus metrics
+- [x] Audit logs
 
 ### Phase 3: Developer Experience
-- [ ] Webhook provider templates (Stripe, GitHub, Razorpay, etc.)
-- [ ] Local dev forwarding (ngrok-like)
+- [x] Webhook provider templates (Stripe, GitHub, Razorpay, etc.)
+- [x] Local dev forwarding (ngrok-like)
 - [ ] Multiple delivery targets (HTTP, SQS, Kafka, Redis)
 - [ ] Event aggregation mode
 - [ ] Docker optimization
