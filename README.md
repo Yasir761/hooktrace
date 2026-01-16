@@ -136,7 +136,8 @@ Replace <your-username>
 
 ## Contributing
 
-We welcome contributions! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
+We welcome contributions! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.`
+
 
 ### Bug Reports
 Use the [bug report template](.github/ISSUE_TEMPLATE/bug_report.md)
