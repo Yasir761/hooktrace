@@ -1,0 +1,57 @@
+services:
+  # --------------------
+  # API SERVICE
+  # --------------------
+  - type: web
+    name: hooktrace-api
+    env: docker
+    dockerfilePath: services/api/Dockerfile
+    plan: free
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: hooktrace-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: hooktrace-redis
+          type: redis
+          property: connectionString
+      - key: NODE_ENV
+        value: production
+
+  # --------------------
+  # WORKER SERVICE
+  # --------------------
+  - type: worker
+    name: hooktrace-worker
+    env: docker
+    dockerfilePath: services/worker/Dockerfile
+    plan: free
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: hooktrace-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: hooktrace-redis
+          type: redis
+          property: connectionString
+
+databases:
+  # --------------------
+  # POSTGRES
+  # --------------------
+  - name: hooktrace-db
+    plan: free
+    postgresMajorVersion: 16
+
+  # --------------------
+  # REDIS
+  # --------------------
+  - name: hooktrace-redis
+    type: redis
+    plan: free
