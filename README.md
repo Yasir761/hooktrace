@@ -143,6 +143,21 @@ Deploy Hooktrace (API + Worker + Postgres + Redis) in one click:
 
 Replace <your-username>
 
+
+
+
+## 🚀 Deploy Dashboard to Vercel
+
+Deploy the Hooktrace dashboard instantly:
+
+[![Deploy with Vercel](https://vercel.com/button)](
+  https://vercel.com/new/clone?repository-url=https://github.com/<your-username>/hooktrace&project-name=hooktrace-dashboard&env=NEXT_PUBLIC_API_URL
+)
+
+⚠️ Vercel deploys **dashboard only**.  
+API + Worker must be deployed on Railway, Render, or self-hosted.
+
+
 ## Contributing
 
 We welcome contributions! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.`
