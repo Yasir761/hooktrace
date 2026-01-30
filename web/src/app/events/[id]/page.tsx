@@ -1,80 +1,109 @@
+import { notFound } from "next/navigation";
 import { apiFetch } from "@/lib/api";
-import { EventHeader } from "@/components/events/event-header";
-import { JsonViewer } from "@/components/events/json-viewer";
-import { Button } from "@/components/ui/button";
+import { ReplayButton } from "../../../components/ReplayButton";
 
-/* ---------- Types ---------- */
 type Event = {
   id: number;
+  token: string;
   route: string;
-  provider: string | null;
-  status: "pending" | "delivered" | "failed";
-  attempt_count: number;
+  status: string;
+  headers: Record<string, unknown>;
+  payload: Record<string, unknown>;
   created_at: string;
-  headers: unknown;
-  payload: unknown;
-  delivery_target: string | null;
-  last_error: string | null;
+  last_error?: string | null;
 };
 
-/* ---------- Server Action ---------- */
-async function replayAction(formData: FormData) {
-  "use server";
-
-  const id = formData.get("id");
-  if (!id) return;
-
-  await apiFetch(`/events/${id}/replay`, {
-    method: "POST",
-  });
-}
-
-/* ---------- Page ---------- */
 export default async function EventDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
-  const event = await apiFetch<Event>(`/events/${id}`);
+  const { id } = await params; // ✅ THIS IS THE FIX
+
+  if (!id || id === "undefined") {
+    notFound();
+  }
+
+  let event: Event;
+
+  try {
+    event = await apiFetch<Event>(`/events/${id}`);
+  } catch {
+    notFound();
+  }
 
   return (
     <div className="p-6 space-y-6">
-      <EventHeader event={event} />
-
-      <div className="flex items-center gap-3">
-        <span className="text-sm text-muted-foreground">
-          Attempts: {event.attempt_count}
-        </span>
-
-        <form action={replayAction}>
-          <input type="hidden" name="id" value={event.id} />
-
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={event.status === "pending"}
-          >
-            Replay
-          </Button>
-        </form>
-
-        {event.delivery_target && (
-          <span className="text-sm text-muted-foreground">
-            Target: {event.delivery_target}
-          </span>
-        )}
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Event #{event.id}</h1>
+        <StatusBadge status={event.status} />
       </div>
 
+      <Section title="Route">
+        <code>{event.route}</code>
+      </Section>
+
+      <Section title="Payload">
+        <JsonBlock value={event.payload} />
+      </Section>
+
+      <Section title="Headers">
+        <JsonBlock value={event.headers} />
+      </Section>
+
       {event.last_error && (
-        <div className="rounded-md border border-destructive bg-destructive/5 p-4">
-          <p className="text-sm font-medium text-destructive">Last Error</p>
-          <p className="mt-1 text-sm">{event.last_error}</p>
-        </div>
+        <Section title="Last Error">
+          <pre className="text-red-500 text-sm">
+            {event.last_error}
+          </pre>
+        </Section>
       )}
 
-      <JsonViewer title="Headers" data={event.headers} />
-      <JsonViewer title="Payload" data={event.payload} />
+      <ReplayButton eventId={event.id} />
     </div>
+  );
+}
+
+/* ---------- UI helpers ---------- */
+
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-2">
+      <h2 className="font-semibold text-sm text-muted-foreground">
+        {title}
+      </h2>
+      <div className="rounded-lg border p-3 bg-background">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function JsonBlock({ value }: { value: unknown }) {
+  return (
+    <pre className="text-xs overflow-auto">
+      {JSON.stringify(value, null, 2)}
+    </pre>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const color =
+    status === "delivered"
+      ? "bg-green-500"
+      : status === "failed"
+      ? "bg-red-500"
+      : "bg-yellow-500";
+
+  return (
+    <span className={`px-2 py-1 text-xs rounded text-white ${color}`}>
+      {status}
+    </span>
   );
 }

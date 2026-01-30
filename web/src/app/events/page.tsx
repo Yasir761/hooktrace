@@ -3,7 +3,6 @@ import { EventsTable } from "@/components/events/event-table";
 
 type Event = {
   id: number;
-  token: string;
   route: string;
   provider: string | null;
   status: "pending" | "delivered" | "failed";
@@ -12,15 +11,20 @@ type Event = {
 };
 
 export default async function EventsPage() {
-  const events = await apiFetch<Event[]>("/events");
+  const res = await apiFetch<{ items: Event[] }>("/events");
 
   return (
     <div className="p-6 space-y-4">
       <h1 className="text-2xl font-semibold">Events</h1>
-
-      <div className="rounded-md border">
-        <EventsTable events={events} />
-      </div>
+      <EventsTable
+        events={
+          res.items.map((item) => ({
+            ...item,
+            // Ensure provider is always a string or undefined, not null
+            provider: item.provider === null ? undefined : item.provider,
+          }))
+        }
+      />
     </div>
   );
 }

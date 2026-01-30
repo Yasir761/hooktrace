@@ -1,5 +1,6 @@
 import requests
 import time
+import json
 from datetime import datetime, timedelta
 from threading import Thread
 
@@ -9,8 +10,6 @@ from redis_client import redis_client
 
 from prometheus_client import start_http_server
 
-
-
 from metrics import (
     events_delivered,
     events_failed,
@@ -18,14 +17,15 @@ from metrics import (
     delivery_latency,
 )
 
+# Redis queues
 QUEUE_MAIN = "webhook:queue"
 QUEUE_RETRY = "webhook:retry"
 QUEUE_DLQ = "webhook:dlq"
 
 BASE_DELAY_SECONDS = 5
 
-import json
 
+# ---------- realtime UI updates ----------
 def publish_update(event_id: int, status: str, attempt: int = 0):
     redis_client.publish(
         "events:updates",
@@ -37,9 +37,12 @@ def publish_update(event_id: int, status: str, attempt: int = 0):
     )
 
 
+# ---------- delivery ----------
 def deliver_event(event_id: int):
     db = SessionLocal()
+
     try:
+        # 1️⃣ Load event
         event = db.execute(
             text("SELECT * FROM webhook_events WHERE id = :id"),
             {"id": event_id},
@@ -49,14 +52,35 @@ def deliver_event(event_id: int):
             print(f"[worker] Event {event_id} not found")
             return
 
-        destination_url = event["delivery_target"]
+        # 2️⃣ Resolve route → destination
+        route_config = db.execute(
+            text("""
+                SELECT mode, dev_target, prod_target
+                FROM webhook_routes
+                WHERE token = :token AND route = :route
+            """),
+            {
+                "token": event["token"],
+                "route": event["route"],
+            },
+        ).mappings().first()
 
-        if not destination_url:
-            print(f"[worker] Event {event_id} has no delivery target")
+        if not route_config:
+            print(f"[worker] No route config for event {event_id}")
             return
 
+        destination_url = (
+            route_config["dev_target"]
+            if route_config["mode"] == "dev"
+            else route_config["prod_target"]
+        )
+
+        if not destination_url:
+            print(f"[worker] No delivery target for event {event_id}")
+            return
+
+        # 3️⃣ Deliver
         try:
-            # Measure delivery latency
             with delivery_latency.time():
                 resp = requests.post(
                     destination_url,
@@ -77,15 +101,16 @@ def deliver_event(event_id: int):
                 db.commit()
 
                 events_delivered.inc()
-                publish_update(event_id, "delivered", event["attempt_count"])
+                publish_update(event_id, "delivered", event.get("attempt_count", 0))
                 print(f"[worker] Event {event_id} → delivered")
                 return
 
             raise Exception(f"HTTP {resp.status_code}")
 
+        # 4️⃣ Retry / DLQ
         except Exception as e:
-            attempt = event["attempt_count"] + 1
-            max_retries = event["max_retries"]
+            attempt = (event.get("attempt_count") or 0) + 1
+            max_retries = event.get("max_retries", 5)
 
             if attempt < max_retries:
                 print(f"[worker] Event {event_id} retry {attempt}/{max_retries}")
@@ -110,7 +135,8 @@ def deliver_event(event_id: int):
                 db.execute(
                     text("""
                         UPDATE webhook_events
-                        SET status = 'failed', last_error = :error
+                        SET status = 'failed',
+                            last_error = :error
                         WHERE id = :id
                     """),
                     {"error": str(e), "id": event_id},
@@ -119,12 +145,13 @@ def deliver_event(event_id: int):
 
                 redis_client.lpush(QUEUE_DLQ, str(event_id))
                 events_failed.inc()
-                publish_update(event_id, "failed", event["attempt_count"])
+                publish_update(event_id, "failed", attempt)
 
     finally:
         db.close()
 
 
+# ---------- retry scheduler ----------
 def schedule_retry(db, event_id: int, attempt: int):
     delay = BASE_DELAY_SECONDS * (2 ** (attempt - 1))
     next_retry_at = datetime.utcnow() + timedelta(seconds=delay)
@@ -180,10 +207,11 @@ def retry_scheduler():
         time.sleep(5)
 
 
+# ---------- main ----------
 def main():
     print("[worker] started, waiting for events...")
 
-    # Expose Prometheus metrics
+    # Prometheus metrics
     start_http_server(8001)
     print("[worker] metrics available on :8001/metrics")
 

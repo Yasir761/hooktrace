@@ -7,7 +7,7 @@ export function JsonViewer({
   data,
 }: {
   title: string;
-  data: unknown;
+  data: Record<string, unknown>;
 }) {
   function copy() {
     navigator.clipboard.writeText(

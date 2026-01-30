@@ -207,6 +207,12 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL","python - << 'EOF'\nimport urllib.request; urllib.request.urlopen('http://localhost:3001/health/'); print('ok')\nEOF"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+     
 
   worker:
     build:
@@ -220,6 +226,8 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      api:
         condition: service_healthy
     restart: unless-stopped
 
