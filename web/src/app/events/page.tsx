@@ -18,13 +18,14 @@ export default async function EventsPage() {
       <h1 className="text-2xl font-semibold">Events</h1>
       <EventsTable
         events={
-          res.items.map((item) => ({
+          res?.items?.map((item) => ({
             ...item,
             // Ensure provider is always a string or undefined, not null
             provider: item.provider === null ? undefined : item.provider,
-          }))
+          })) ?? []
         }
       />
+       
     </div>
   );
 }

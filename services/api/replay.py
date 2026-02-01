@@ -4,7 +4,6 @@ from database import SessionLocal
 from redis_client import redis_client
 
 router = APIRouter(prefix="/events", tags=["replay"])
-
 QUEUE_MAIN = "webhook:queue"
 
 
@@ -13,12 +12,37 @@ def replay_event(event_id: int):
     db = SessionLocal()
     try:
         event = db.execute(
-            text("SELECT id FROM webhook_events WHERE id = :id"),
+            text("""
+                SELECT
+                    e.id,
+                    e.token,
+                    e.route,
+                    r.mode,
+                    r.dev_target,
+                    r.prod_target
+                FROM webhook_events e
+                JOIN webhook_routes r
+                  ON e.token = r.token
+                 AND e.route = r.route
+                WHERE e.id = :id
+            """),
             {"id": event_id},
-        ).first()
+        ).mappings().first()
 
         if not event:
             raise HTTPException(status_code=404, detail="Event not found")
+
+        delivery_target = (
+            event["dev_target"]
+            if event["mode"] == "dev"
+            else event["prod_target"]
+        )
+
+        if not delivery_target:
+            raise HTTPException(
+                status_code=400,
+                detail="No delivery target configured for this route",
+            )
 
         db.execute(
             text("""
@@ -27,10 +51,14 @@ def replay_event(event_id: int):
                     status = 'pending',
                     attempt_count = 0,
                     last_error = NULL,
-                    next_retry_at = NULL
+                    next_retry_at = NULL,
+                    delivery_target = :target
                 WHERE id = :id
             """),
-            {"id": event_id},
+            {
+                "id": event_id,
+                "target": delivery_target,
+            },
         )
         db.commit()
 
