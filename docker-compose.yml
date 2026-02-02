@@ -161,7 +161,6 @@
 
 
 
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -200,6 +199,7 @@ services:
     container_name: hooktrace-api
     environment:
       DATABASE_URL: postgresql://hooktrace:hooktrace_dev@postgres:5432/hooktrace
+      REDIS_URL: redis://redis:6379
     ports:
       - "3001:3001"
     depends_on:
@@ -208,11 +208,14 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL","python - << 'EOF'\nimport urllib.request; urllib.request.urlopen('http://localhost:3001/health/'); print('ok')\nEOF"]
+      test:
+        [
+          "CMD-SHELL",
+          "python - << 'EOF'\nimport urllib.request; urllib.request.urlopen('http://localhost:3001/health/'); print('ok')\nEOF"
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
-     
 
   worker:
     build:
@@ -231,6 +234,28 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  
+
+  prometheus:
+    image: prom/prometheus
+    container_name: hooktrace-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/prometheus.yml:/etc/prometheus/prometheus.yml
+    depends_on:
+      - api
+      - worker
+
+  grafana:
+    image: grafana/grafana
+    container_name: hooktrace-grafana
+    ports:
+      - "3005:3000"
+    depends_on:
+      - prometheus
+
 volumes:
   postgres_data:
   redis_data:
+

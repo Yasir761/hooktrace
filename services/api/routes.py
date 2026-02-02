@@ -19,7 +19,6 @@ from metrics import (
 )
 
 router = APIRouter()
-
 @router.post("/r/{token}/{route}", status_code=status.HTTP_202_ACCEPTED)
 async def relay(token: str, route: str, request: Request):
     raw_body = await request.body()
@@ -52,10 +51,13 @@ async def relay(token: str, route: str, request: Request):
             {"token": token, "route": route},
         ).mappings().first()
 
-        route_secret = route_config["secret"] if route_config else None
+        if not route_config:
+            return JSONResponse(status_code=404, content={"detail": "Route not found"})
 
-        # ---- Signature validation ----
-        if route_secret:
+        route_secret = route_config["secret"]
+
+        # ---- Signature validation (skip in dev) ----
+        if route_secret and route_config["mode"] != "dev":
             if provider == "stripe":
                 if not stripe_provider.verify(request, route_secret):
                     webhooks_invalid_signature.inc()
@@ -72,13 +74,11 @@ async def relay(token: str, route: str, request: Request):
                     return JSONResponse(status_code=401, content={"detail": "Invalid signature"})
 
         # ---- Resolve delivery target ----
-        delivery_target = None
-        if route_config:
-            delivery_target = (
-                route_config["dev_target"]
-                if route_config["mode"] == "dev"
-                else route_config["prod_target"]
-            )
+        delivery_target = (
+            route_config["dev_target"]
+            if route_config["mode"] == "dev"
+            else route_config["prod_target"]
+        )
 
         event = WebhookEvent(
             token=token,
@@ -96,7 +96,9 @@ async def relay(token: str, route: str, request: Request):
 
         webhooks_received.labels(token=token, route=route).inc()
 
+        print("ENQUEUE DEBUG: pushing to redis:", event.id)
         redis_client.lpush("webhook:queue", str(event.id))
+
         return {"accepted": True}
 
     except IntegrityError:
@@ -106,4 +108,3 @@ async def relay(token: str, route: str, request: Request):
 
     finally:
         db.close()
-

@@ -17,34 +17,27 @@ export function EventLiveView({ event }: { event: Event }) {
   );
 
   useEffect(() => {
+    let alive = true;
     const ws = new WebSocket("ws://localhost:3001/ws/events");
 
     ws.onopen = () => {
-      console.log("[ws] connected");
+      if (alive) console.log("[ws] connected");
     };
 
     ws.onmessage = (msg) => {
-      try {
-        const data = JSON.parse(msg.data);
-
-        if (data.event_id !== event.id) return;
-
-        console.log("[ws:update]", data);
-
-        if (data.status) setStatus(data.status);
-        if (typeof data.attempt_count === "number") {
-          setAttempt(data.attempt_count);
-        }
-      } catch (err) {
-        console.error("[ws] invalid message", err);
+      const data = JSON.parse(msg.data);
+      if (data.event_id === event.id) {
+        setStatus(data.status);
+        setAttempt(data.attempt_count ?? null);
       }
     };
 
-    ws.onerror = (err) => {
-      console.error("[ws] error", err);
+    ws.onerror = () => {
+      // intentionally ignored (React dev mode causes noisy reconnects)
     };
 
     return () => {
+      alive = false;
       ws.close();
       console.log("[ws] disconnected");
     };
