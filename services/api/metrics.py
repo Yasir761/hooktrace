@@ -1,17 +1,17 @@
-from prometheus_client import Counter, Histogram
+from prometheus_client import Counter
 
 webhooks_received = Counter(
-    "webhooks_received_total",
+    "hooktrace_webhooks_received_total",
     "Total number of webhooks received",
     ["token", "route"]
 )
 
 webhooks_deduplicated = Counter(
-    "webhooks_deduplicated_total",
+    "hooktrace_webhooks_deduplicated_total",
     "Duplicate webhooks ignored"
 )
 
 webhooks_invalid_signature = Counter(
-    "webhooks_invalid_signature_total",
+    "hooktrace_webhooks_invalid_signature_total",
     "Webhooks rejected due to invalid signature"
 )
