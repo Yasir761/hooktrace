@@ -42,7 +42,7 @@ def deliver_event(event_id: int):
     db = SessionLocal()
 
     try:
-        # 1️⃣ Load event
+        #  Load event
         event = db.execute(
             text("SELECT * FROM webhook_events WHERE id = :id"),
             {"id": event_id},
@@ -52,7 +52,7 @@ def deliver_event(event_id: int):
             print(f"[worker] Event {event_id} not found")
             return
 
-        # 2️⃣ Resolve route → destination
+        #  Resolve route → destination
         route_config = db.execute(
             text("""
                 SELECT mode, dev_target, prod_target
@@ -79,7 +79,7 @@ def deliver_event(event_id: int):
             print(f"[worker] No delivery target for event {event_id}")
             return
 
-        # 3️⃣ Deliver
+        #  Deliver
         try:
             with delivery_latency.time():
                 resp = requests.post(
