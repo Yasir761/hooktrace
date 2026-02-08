@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { StatusBadge } from "@/components/events/status-badge";
 
 type Event = {
   id: number;
@@ -9,6 +10,7 @@ type Event = {
   status: string;
   attempt_count: number;
   created_at: string;
+  last_error?: string;
 };
 
 export function EventsTable({ events }: { events: Event[] }) {
@@ -40,7 +42,14 @@ export function EventsTable({ events }: { events: Event[] }) {
               <td className="p-2">{event.id}</td>
               <td className="p-2">{event.route}</td>
               <td className="p-2">{event.provider ?? "-"}</td>
-              <td className="p-2">{event.status}</td>
+              <td className="p-2">
+                <StatusBadge status={event.status as "pending" | "delivered" | "failed"} />
+                {event.last_error ? (
+                  <div className="text-xs text-red-500 mt-1 line-clamp-1">
+                    {event.last_error}
+                  </div>
+                ) : null}
+              </td>
               <td className="p-2">{event.attempt_count}</td>
               <td className="p-2">
                 {new Date(event.created_at).toLocaleString()}

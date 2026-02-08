@@ -18,7 +18,10 @@ export function EventLiveView({ event }: { event: Event }) {
 
   useEffect(() => {
     let alive = true;
-    const ws = new WebSocket("ws://localhost:3001/ws/events");
+    const apiUrl =
+    process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+  const wsUrl = `${apiUrl.replace(/^http/, "ws")}/ws/events`;
+  const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
       if (alive) console.log("[ws] connected");

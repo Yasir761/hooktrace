@@ -1,133 +1,25 @@
-// import { notFound } from "next/navigation";
-// import { apiFetch } from "@/lib/api";
-// import { ReplayButton } from "../../../src/components/ReplayButton";
-// import { EventLiveView } from "@/components/EventLiveView";
-
-// type Event = {
-//   id: number;
-//   token: string;
-//   route: string;
-//   status: string;
-//   headers: Record<string, unknown>;
-//   payload: Record<string, unknown>;
-//   created_at: string;
-//   last_error?: string | null;
-// };
-
-// export default async function EventDetailPage({
-//   params,
-// }: {
-//   params: Promise<{ id: string }>;
-// }) {
-//   const { id } = await params; 
-
-//   if (!id || id === "undefined") {
-//     notFound();
-//   }
-
-//   let event: Event;
-
-//   try {
-//     event = await apiFetch<Event>(`/events/${id}`);
-//   } catch {
-//     notFound();
-//   }
-
-//   return (
-//     <div className="p-6 space-y-6">
-//       <div className="flex items-center justify-between">
-//         <h1 className="text-2xl font-bold">Event #{event.id}</h1>
-//         {/* <StatusBadge status={event.status} /> */}
-//         {/* <EventLiveView event={event} /> */}
-//         <div className="border p-2">LIVE VIEW HERE</div>
-// <EventLiveView event={event} />
-
-//       </div>
-
-//       <Section title="Route">
-//         <code>{event.route}</code>
-//       </Section>
-
-//       <Section title="Payload">
-//         <JsonBlock value={event.payload} />
-//       </Section>
-
-//       <Section title="Headers">
-//         <JsonBlock value={event.headers} />
-//       </Section>
-
-//       {event.last_error && (
-//         <Section title="Last Error">
-//           <pre className="text-red-500 text-sm">
-//             {event.last_error}
-//           </pre>
-//         </Section>
-//       )}
-
-//       <ReplayButton eventId={event.id} />
-//     </div>
-//   );
-// }
-
-// /* ---------- UI helpers ---------- */
-
-// function Section({
-//   title,
-//   children,
-// }: {
-//   title: string;
-//   children: React.ReactNode;
-// }) {
-//   return (
-//     <div className="space-y-2">
-//       <h2 className="font-semibold text-sm text-muted-foreground">
-//         {title}
-//       </h2>
-//       <div className="rounded-lg border p-3 bg-background">
-//         {children}
-//       </div>
-//     </div>
-//   );
-// }
-
-// function JsonBlock({ value }: { value: unknown }) {
-//   return (
-//     <pre className="text-xs overflow-auto">
-//       {JSON.stringify(value, null, 2)}
-//     </pre>
-//   );
-// }
-
-// function StatusBadge({ status }: { status: string }) {
-//   const color =
-//     status === "delivered"
-//       ? "bg-green-500"
-//       : status === "failed"
-//       ? "bg-red-500"
-//       : "bg-yellow-500";
-
-//   return (
-//     <span className={`px-2 py-1 text-xs rounded text-white ${color}`}>
-//       {status}
-//     </span>
-//   );
-// }
-
 
 
 import { notFound } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import { ReplayButton } from "@/components/ReplayButton";
 import { EventLiveView } from "@/components/EventLiveView";
+import { EventHeader } from "@/components/events/event-header";
+import { JsonViewer } from "@/components/events/json-viewer";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type Event = {
   id: number;
   token: string;
   route: string;
+  provider: string | null;
   status: string;
+  attempt_count: number;
   headers: Record<string, unknown>;
   payload: Record<string, unknown>;
   created_at: string;
+  delivery_target?: string | null;
+  idempotency_key?: string | null;
   last_error?: string | null;
 };
 
@@ -163,59 +55,91 @@ export default async function EventDetailPage({
   
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Event #{event.id}</h1>
-        <EventLiveView event={event} />
+     <div className="flex items-start justify-between gap-4">
+        <EventHeader
+          event={{
+            id: event.id,
+            route: event.route,
+            provider: event.provider,
+            status: event.status as "pending" | "delivered" | "failed",
+            attempt_count: event.attempt_count,
+            created_at: event.created_at,
+          }}
+        />
+        <div className="flex items-center gap-3">
+          <EventLiveView event={event} />
+          <ReplayButton eventId={event.id} />
+        </div>
       </div>
 
-      <Section title="Route">
-        <code>{event.route}</code>
-      </Section>
+      <Card>
+        <CardHeader>
+          <CardTitle>Details</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <div className="text-sm text-muted-foreground">Route</div>
+              <div className="font-medium">{event.route}</div>
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground">Token</div>
+              <div className="font-medium">{event.token}</div>
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground">Provider</div>
+              <div className="font-medium">{event.provider ?? "generic"}</div>
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground">Created</div>
+              <div className="font-medium">
+                {new Date(event.created_at).toLocaleString()}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground">Attempts</div>
+              <div className="font-medium">{event.attempt_count}</div>
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground">Delivery Target</div>
+              <div className="font-medium">
+                {event.delivery_target ?? "Not set"}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground">Idempotency Key</div>
+              <div className="font-medium">
+                {event.idempotency_key ?? "None"}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      <Section title="Payload">
-        <JsonBlock value={event.payload} />
-      </Section>
+      {event.last_error ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Last Error</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <pre className="text-sm text-red-500 whitespace-pre-wrap">
+              {event.last_error}
+            </pre>
+          </CardContent>
+        </Card>
+      ) : null}
 
-      <Section title="Headers">
-        <JsonBlock value={event.headers} />
-      </Section>
-
-      {event.last_error && (
-        <Section title="Last Error">
-          <pre className="text-red-500 text-sm">{event.last_error}</pre>
-        </Section>
-      )}
-
-      <ReplayButton eventId={event.id} />
+      <div className="grid gap-6 lg:grid-cols-2">
+        <JsonViewer
+          title="Payload"
+          data={event.payload as Record<string, unknown>}
+        />
+        <JsonViewer
+          title="Headers"
+          data={event.headers as Record<string, unknown>}
+        />
+      </div>
     </div>
   );
 }
 
-/* ---------- UI helpers ---------- */
-
-function Section({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-2">
-      <h2 className="font-semibold text-sm text-muted-foreground">
-        {title}
-      </h2>
-      <div className="rounded-lg border p-3 bg-background">
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function JsonBlock({ value }: { value: unknown }) {
-  return (
-    <pre className="text-xs overflow-auto">
-      {JSON.stringify(value, null, 2)}
-    </pre>
-  );
-}

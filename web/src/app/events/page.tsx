@@ -72,6 +72,23 @@ export default async function EventsPage({
           >
             All
           </Link>
+          <Link
+            href="/events?status=pending"
+            className={`px-3 py-1 rounded text-sm ${
+              status === "pending" ? "bg-secondary text-white" : "bg-muted"
+            }`}
+          >
+            Pending
+          </Link>
+
+          <Link
+            href="/events?status=delivered"
+            className={`px-3 py-1 rounded text-sm ${
+              status === "delivered" ? "bg-primary text-white" : "bg-muted"
+            }`}
+          >
+            Delivered
+          </Link>
 
           <Link
             href="/events?status=failed"

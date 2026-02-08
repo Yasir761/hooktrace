@@ -254,10 +254,20 @@ services:
     container_name: hooktrace-grafana
     ports:
       - "3005:3000"
+    environment:
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning
+      - ./infra/grafana/dashboards:/var/lib/grafana/dashboards
     depends_on:
       - prometheus
 
 volumes:
   postgres_data:
   redis_data:
+  grafana_data:
 

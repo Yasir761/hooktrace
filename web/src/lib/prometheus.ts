@@ -1,0 +1,31 @@
+const PROM_URL =
+  process.env.PROMETHEUS_URL || "http://localhost:9090";
+
+export async function promQuery<T = unknown>(query: string): Promise<T> {
+  const res = await fetch(
+    `${PROM_URL}/api/v1/query?query=${encodeURIComponent(query)}`,
+    { cache: "no-store" }
+  );
+
+  if (!res.ok) {
+    throw new Error("Failed to query Prometheus");
+  }
+
+  const json = await res.json();
+  return json.data.result;
+}
+
+export function getScalar(result: unknown[], fallback = 0) {
+  if (!result?.length) return fallback;
+  const first = result[0] as { value?: unknown[] } | undefined;
+  if (
+    !first ||
+    !Array.isArray(first.value) ||
+    first.value.length < 2 ||
+    typeof first.value[1] !== "string"
+  ) {
+    return fallback;
+  }
+  const num = Number(first.value[1]);
+  return Number.isNaN(num) ? fallback : num;
+}

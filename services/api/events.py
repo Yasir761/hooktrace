@@ -19,6 +19,7 @@ def list_events(
                 id,
                 token,
                 route,
+                provider,
                 status,
                 attempt_count,
                 last_error,
@@ -47,5 +48,38 @@ def list_events(
             "limit": limit,
             "offset": offset,
         }
+    finally:
+        db.close()
+
+
+@router.get("/{event_id}")
+def get_event(event_id: int):
+    db = SessionLocal()
+    try:
+        event = db.execute(
+            text("""
+                SELECT
+                    id,
+                    token,
+                    route,
+                    provider,
+                    status,
+                    attempt_count,
+                    last_error,
+                    headers,
+                    payload,
+                    delivery_target,
+                    idempotency_key,
+                    created_at
+                FROM webhook_events
+                WHERE id = :id
+            """),
+            {"id": event_id},
+        ).mappings().first()
+
+        if not event:
+            raise HTTPException(status_code=404, detail="Event not found")
+
+        return dict(event)
     finally:
         db.close()

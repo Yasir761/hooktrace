@@ -83,6 +83,7 @@ async def relay(token: str, route: str, request: Request):
         event = WebhookEvent(
             token=token,
             route=route,
+            provider=provider,
             headers=headers,
             payload=payload,
             status="pending",
