@@ -1,67 +1,53 @@
-// "use client";
+"use client"
 
-// import { apiFetch } from "@/lib/api";
+import { useState } from "react"
+import { motion } from "framer-motion"
+import { RotateCcw } from "lucide-react"
+import { toast } from "sonner"
 
-// export function ReplayButton({ eventId }: { eventId: number }) {
-//   const replay = async () => {
-//     console.log("ReplayButton received eventId:", eventId);
-
-//     if (!Number.isInteger(eventId)) {
-//       console.error("Replay called with invalid eventId", eventId);
-//       return;
-//     }
-
-//     await apiFetch(`/events/${eventId}/replay`, {
-//       method: "POST",
-//     });
-//   };
-
-//   return (
-//     <button
-//       onClick={replay}
-//       className="px-3 py-1 text-sm rounded bg-blue-600 text-white"
-//     >
-//       Replay
-//     </button>
-//   );
-// }
-
-
-
-
-
-
-"use client";
-
-import { useState } from "react";
-import { apiFetch } from "@/lib/api";
+import { apiFetch } from "@/lib/api"
+import { Button } from "@/components/ui/button"
 
 export function ReplayButton({ eventId }: { eventId: number }) {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false)
 
   async function handleReplay() {
-    console.log("ReplayButton received eventId:", eventId);
+    if (loading) return
 
-    setLoading(true);
+    setLoading(true)
+
     try {
       await apiFetch(`/events/${eventId}/replay`, {
         method: "POST",
-      });
+      })
+
+      toast.success("Event replay queued")
     } catch (err) {
-      console.error("Replay failed", err);
-      alert("Replay failed");
+      toast.error("Failed to replay event")
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
   }
 
   return (
-    <button
-      onClick={handleReplay}
-      disabled={loading}
-      className="px-4 py-2 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 disabled:opacity-50"
+    <motion.div
+      whileTap={{ scale: 0.97 }}
+      className="inline-flex"
     >
-      {loading ? "Replaying…" : "Replay Event"}
-    </button>
-  );
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={handleReplay}
+        disabled={loading}
+        className="flex items-center gap-2"
+      >
+        <RotateCcw
+          className={`h-4 w-4 ${
+            loading ? "animate-spin text-muted-foreground" : ""
+          }`}
+        />
+        {loading ? "Replaying…" : "Replay"}
+      </Button>
+    </motion.div>
+  )
 }

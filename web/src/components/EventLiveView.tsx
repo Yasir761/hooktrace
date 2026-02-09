@@ -1,71 +1,91 @@
-"use client";
+"use client"
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react"
+import { motion, AnimatePresence } from "framer-motion"
+
+import { StatusBadge } from "@/components/events/status-badge"
+
+type EventStatus = "pending" | "delivered" | "failed" | "retrying"
 
 type Event = {
-  id: number;
-  status: string;
-  attempt_count?: number | null;
-};
+  id: number
+  status: EventStatus
+  attempt_count?: number | null
+}
 
 export function EventLiveView({ event }: { event: Event }) {
-  console.log("[EventLiveView] render", event.id);
-
-  const [status, setStatus] = useState(event.status);
+  const [status, setStatus] = useState<EventStatus>(event.status)
   const [attempt, setAttempt] = useState<number | null>(
     event.attempt_count ?? null
-  );
+  )
+
+  const wsRef = useRef<WebSocket | null>(null)
 
   useEffect(() => {
-    let alive = true;
     const apiUrl =
-    process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-  const wsUrl = `${apiUrl.replace(/^http/, "ws")}/ws/events`;
-  const ws = new WebSocket(wsUrl);
+      process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
 
-    ws.onopen = () => {
-      if (alive) console.log("[ws] connected");
-    };
+    const wsUrl = `${apiUrl.replace(/^http/, "ws")}/ws/events`
+    const ws = new WebSocket(wsUrl)
+    wsRef.current = ws
 
     ws.onmessage = (msg) => {
-      const data = JSON.parse(msg.data);
-      if (data.event_id === event.id) {
-        setStatus(data.status);
-        setAttempt(data.attempt_count ?? null);
-      }
-    };
+      try {
+        const data = JSON.parse(msg.data)
 
-    ws.onerror = () => {
-      // intentionally ignored (React dev mode causes noisy reconnects)
-    };
+        if (data.event_id !== event.id) return
+
+        if (data.status) setStatus(data.status)
+        if ("attempt_count" in data)
+          setAttempt(data.attempt_count ?? null)
+      } catch {
+        // ignore malformed messages
+      }
+    }
 
     return () => {
-      alive = false;
-      ws.close();
-      console.log("[ws] disconnected");
-    };
-  }, [event.id]);
+      ws.close()
+      wsRef.current = null
+    }
+  }, [event.id])
 
-  const color =
-    status === "delivered"
-      ? "bg-green-500"
-      : status === "failed"
-      ? "bg-red-500"
-      : status === "retrying"
-      ? "bg-orange-500"
-      : "bg-yellow-500";
+  // 🔑 Map internal status → UI status
+  const badgeStatus =
+    status === "retrying" ? "pending" : status
 
   return (
-    <div className="flex items-center gap-2">
-      <span className={`px-2 py-1 text-xs rounded text-white ${color}`}>
-        {status}
-      </span>
+    <div className="flex items-center gap-3">
+      {/* Status badge */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={badgeStatus}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          transition={{ duration: 0.15 }}
+        >
+          <StatusBadge status={badgeStatus} />
+        </motion.div>
+      </AnimatePresence>
 
+      {/* Attempt counter */}
       {attempt !== null && (
-        <span className="text-xs text-muted-foreground">
+        <motion.span
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-xs text-muted-foreground"
+        >
           attempt {attempt}
+        </motion.span>
+      )}
+
+      {/* Live pulse indicator */}
+      {(status === "pending" || status === "retrying") && (
+        <span className="relative flex h-2 w-2">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-500/60" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-orange-500" />
         </span>
       )}
     </div>
-  );
+  )
 }

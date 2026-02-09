@@ -29,3 +29,17 @@ export function getScalar(result: unknown[], fallback = 0) {
   const num = Number(first.value[1]);
   return Number.isNaN(num) ? fallback : num;
 }
+
+
+export async function promRangeQuery(query: string) {
+    const end = Math.floor(Date.now() / 1000)
+    const start = end - 60 * 60 * 24
+    const step = 60 * 10
+  
+    const res = await fetch(
+      `${PROM_URL}/api/v1/query_range?query=${encodeURIComponent(query)}&start=${start}&end=${end}&step=${step}`
+    )
+    const data = await res.json()
+    return data.data.result[0]?.values || []
+  }
+  

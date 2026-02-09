@@ -1,12 +1,39 @@
-export default function MetricsPage() {
-    return (
-      <div className="p-6 space-y-4">
-        <h1 className="text-2xl font-semibold">System Metrics</h1>
-  
-        <iframe
-          src="http://localhost:3005/d/ad5vkvk/hooktrace-dashboard?orgId=1&kiosk"
-          className="w-full h-[900px] rounded-xl border"
-        />
-      </div>
-    );
-  }
+import { promRangeQuery } from "@/lib/prometheus"
+import MetricsClient from "./metrics-client"
+
+export default async function MetricsPage() {
+  const latency = await promRangeQuery(
+    "histogram_quantile(0.95, rate(hooktrace_delivery_latency_seconds_bucket[5m])) or vector(0)"
+  )
+
+  const retries = await promRangeQuery(
+    "rate(hooktrace_events_retried_total[5m]) or vector(0)"
+  )
+
+  const rejected = await promRangeQuery(
+    "rate(hooktrace_events_failed_total[5m]) or vector(0)"
+  )
+
+  const incoming = await promRangeQuery(
+    "rate(hooktrace_webhooks_received_total[5m]) or vector(0)"
+  )
+
+  const delivered = await promRangeQuery(
+    "increase(hooktrace_events_delivered_total[5m]) or vector(0)"
+  )
+
+  const failed = await promRangeQuery(
+    "increase(hooktrace_events_failed_total[5m]) or vector(0)"
+  )
+
+  return (
+    <MetricsClient
+      latency={latency}
+      retries={retries}
+      rejected={rejected}
+      incoming={incoming}
+      delivered={delivered}
+      failed={failed}
+    />
+  )
+}

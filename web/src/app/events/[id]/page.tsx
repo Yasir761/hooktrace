@@ -1,145 +1,154 @@
+import { notFound } from "next/navigation"
+import { format } from "date-fns"
 
+import { apiFetch } from "@/lib/api"
+import { ReplayButton } from "@/components/ReplayButton"
+import { EventLiveView } from "@/components/EventLiveView"
+import { EventHeader } from "@/components/events/event-header"
+import { JsonViewer } from "@/components/events/json-viewer"
 
-import { notFound } from "next/navigation";
-import { apiFetch } from "@/lib/api";
-import { ReplayButton } from "@/components/ReplayButton";
-import { EventLiveView } from "@/components/EventLiveView";
-import { EventHeader } from "@/components/events/event-header";
-import { JsonViewer } from "@/components/events/json-viewer";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 
 type Event = {
-  id: number;
-  token: string;
-  route: string;
-  provider: string | null;
-  status: string;
-  attempt_count: number;
-  headers: Record<string, unknown>;
-  payload: Record<string, unknown>;
-  created_at: string;
-  delivery_target?: string | null;
-  idempotency_key?: string | null;
-  last_error?: string | null;
-};
+  id: number
+  token: string
+  route: string
+  provider: string | null
+  status: "pending" | "delivered" | "failed" | "retrying"
+  attempt_count: number
+  headers: Record<string, unknown>
+  payload: Record<string, unknown>
+  created_at: string
+  delivery_target?: string | null
+  idempotency_key?: string | null
+  last_error?: string | null
+}
 
 export default async function EventDetailPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ id: string }>
 }) {
-  const id = (await params).id;
+  const id = (await params).id
 
-  if (!id || Number.isNaN(Number(id))) {
-    notFound();
-  }
+  if (!id || Number.isNaN(Number(id))) notFound()
 
-  
-
-  let event: Event | null = null;
+  let event: Event | null = null
 
   try {
-    event = await apiFetch<Event>(`/events/${id}`);
-  } catch (err) {
-    console.error("Failed to fetch event", err);
+    event = await apiFetch<Event>(`/events/${id}`)
+  } catch {
+    notFound()
   }
 
-  if (!event) {
-    return (
-      <div className="p-6">
-        <h1 className="text-lg font-semibold">Event not found</h1>
-      </div>
-    );
-  }
+  if (!event) notFound()
 
-  
   return (
-    <div className="p-6 space-y-6">
-     <div className="flex items-start justify-between gap-4">
+    <div className="mx-auto max-w-7xl px-6 py-8 space-y-8">
+      {/* Header + Actions */}
+      <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
         <EventHeader
           event={{
             id: event.id,
             route: event.route,
             provider: event.provider,
-            status: event.status as "pending" | "delivered" | "failed",
+            status:
+              event.status === "retrying" ? "pending" : event.status,
             attempt_count: event.attempt_count,
             created_at: event.created_at,
           }}
         />
+
         <div className="flex items-center gap-3">
           <EventLiveView event={event} />
           <ReplayButton eventId={event.id} />
         </div>
       </div>
 
+      {/* Metadata */}
       <Card>
         <CardHeader>
-          <CardTitle>Details</CardTitle>
+          <CardTitle>Event Details</CardTitle>
         </CardHeader>
+
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <div className="text-sm text-muted-foreground">Route</div>
-              <div className="font-medium">{event.route}</div>
-            </div>
-            <div>
-              <div className="text-sm text-muted-foreground">Token</div>
-              <div className="font-medium">{event.token}</div>
-            </div>
-            <div>
-              <div className="text-sm text-muted-foreground">Provider</div>
-              <div className="font-medium">{event.provider ?? "generic"}</div>
-            </div>
-            <div>
-              <div className="text-sm text-muted-foreground">Created</div>
-              <div className="font-medium">
-                {new Date(event.created_at).toLocaleString()}
-              </div>
-            </div>
-            <div>
-              <div className="text-sm text-muted-foreground">Attempts</div>
-              <div className="font-medium">{event.attempt_count}</div>
-            </div>
-            <div>
-              <div className="text-sm text-muted-foreground">Delivery Target</div>
-              <div className="font-medium">
-                {event.delivery_target ?? "Not set"}
-              </div>
-            </div>
-            <div>
-              <div className="text-sm text-muted-foreground">Idempotency Key</div>
-              <div className="font-medium">
-                {event.idempotency_key ?? "None"}
-              </div>
-            </div>
-          </div>
+          <dl className="grid gap-6 md:grid-cols-3">
+            <Meta label="Route" value={event.route} />
+            <Meta label="Token" value={event.token} />
+            <Meta label="Provider" value={event.provider ?? "generic"} />
+            <Meta
+              label="Created"
+              value={format(
+                new Date(event.created_at),
+                "yyyy-MM-dd HH:mm:ss"
+              )}
+            />
+            <Meta label="Attempts" value={event.attempt_count} />
+            <Meta
+              label="Delivery Target"
+              value={event.delivery_target ?? "Not set"}
+            />
+            <Meta
+              label="Idempotency Key"
+              value={event.idempotency_key ?? "None"}
+            />
+          </dl>
         </CardContent>
       </Card>
 
-      {event.last_error ? (
-        <Card>
+      {/* Error */}
+      {event.last_error && (
+        <Card className="border-destructive/40">
           <CardHeader>
-            <CardTitle>Last Error</CardTitle>
+            <CardTitle className="text-destructive">
+              Last Delivery Error
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <pre className="text-sm text-red-500 whitespace-pre-wrap">
+            <pre className="whitespace-pre-wrap text-sm text-destructive">
               {event.last_error}
             </pre>
           </CardContent>
         </Card>
-      ) : null}
+      )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      {/* Payload / Headers */}
+      <section className="grid gap-6 lg:grid-cols-2">
         <JsonViewer
           title="Payload"
-          data={event.payload as Record<string, unknown>}
+          data={event.payload}
         />
         <JsonViewer
           title="Headers"
-          data={event.headers as Record<string, unknown>}
+          data={event.headers}
         />
-      </div>
+      </section>
     </div>
-  );
+  )
 }
 
+/* ---------------- Helpers ---------------- */
+
+function Meta({
+  label,
+  value,
+}: {
+  label: string
+  value: React.ReactNode
+}) {
+  return (
+    <div>
+      <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+        {label}
+      </dt>
+      <dd className="mt-1 font-medium text-sm break-all">
+        {value}
+      </dd>
+    </div>
+  )
+}
