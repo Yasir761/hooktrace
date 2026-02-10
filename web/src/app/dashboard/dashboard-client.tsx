@@ -141,7 +141,7 @@ export default function DashboardClient({
                     </p>
                   </div>
 
-                  {/* 🟠 Brand-colored icon */}
+                  {/*  Brand-colored icon */}
                   <Icon className="h-5 w-5 text-primary drop-shadow-sm" />
                 </div>
               </motion.div>
