@@ -4,6 +4,12 @@ import { useState } from "react"
 import { useWaitlist } from "@/hooks/use-waitlist"
 import { motion } from "framer-motion"
 
+declare global {
+  interface Window {
+    gtag?: (...args: unknown[]) => void
+  }
+}
+
 export function WaitlistForm() {
   const { count, join } = useWaitlist()
 
@@ -23,13 +29,12 @@ export function WaitlistForm() {
       setSuccess(true)
       setEmail("")
   
-      // ✅ Fire GA event only after success
-      if (typeof window !== "undefined" && window.gtag) {
+      // Fire GA event only after success
+      if (typeof window !== "undefined" && typeof window.gtag === "function") {
         window.gtag("event", "waitlist_join", {
           method: "hero_form",
         })
       }
-  
     } catch {
       setError("Already joined or invalid email.")
     } finally {
