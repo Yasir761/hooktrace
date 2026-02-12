@@ -1,3 +1,6 @@
+export const dynamic = "force-dynamic"
+export const runtime = "nodejs"
+
 import { promRangeQuery } from "@/lib/prometheus"
 import MetricsClient from "./metrics-client"
 
