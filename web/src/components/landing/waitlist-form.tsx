@@ -14,14 +14,22 @@ export function WaitlistForm() {
 
   async function handleSubmit() {
     if (!email.trim()) return
-
+  
     setLoading(true)
     setError("")
-
+  
     try {
       await join(email.trim())
       setSuccess(true)
       setEmail("")
+  
+      // ✅ Fire GA event only after success
+      if (typeof window !== "undefined" && window.gtag) {
+        window.gtag("event", "waitlist_join", {
+          method: "hero_form",
+        })
+      }
+  
     } catch {
       setError("Already joined or invalid email.")
     } finally {
@@ -29,6 +37,8 @@ export function WaitlistForm() {
     }
   }
 
+
+  
   return (
     <div className="mt-10 w-full max-w-lg space-y-5">
 
