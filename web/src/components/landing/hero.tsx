@@ -2,11 +2,35 @@
 
 import Image from "next/image"
 import { motion } from "framer-motion"
+import { event } from "@/lib/gtag"
 
 import { LaunchCountdown } from "@/components/landing/launch-countdown"
 import { WaitlistForm } from "@/components/landing/waitlist-form"
+import { useEffect } from "react"
 
 export function Hero() {
+  useEffect(() => {
+    let triggered = false
+  
+    const handleScroll = () => {
+      const scrollPercent =
+        (window.scrollY /
+          (document.body.scrollHeight - window.innerHeight)) *
+        100
+  
+      if (scrollPercent > 50 && !triggered) {
+        triggered = true
+        event({
+          action: "scroll_50",
+          category: "engagement",
+          label: "landing_page",
+        })
+      }
+    }
+  
+    window.addEventListener("scroll", handleScroll)
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [])
   return (
     <section
       id="waitlist"

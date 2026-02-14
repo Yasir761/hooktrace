@@ -3,12 +3,7 @@
 import { useState } from "react"
 import { useWaitlist } from "@/hooks/use-waitlist"
 import { motion } from "framer-motion"
-
-declare global {
-  interface Window {
-    gtag?: (...args: unknown[]) => void
-  }
-}
+import { event } from "@/lib/gtag"
 
 export function WaitlistForm() {
   const { count, join } = useWaitlist()
@@ -17,37 +12,44 @@ export function WaitlistForm() {
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState("")
+  const [formStarted, setFormStarted] = useState(false)
 
   async function handleSubmit() {
     if (!email.trim()) return
-  
+
     setLoading(true)
     setError("")
-  
+
     try {
       await join(email.trim())
       setSuccess(true)
       setEmail("")
-  
-      // Fire GA event only after success
-      if (typeof window !== "undefined" && typeof window.gtag === "function") {
-        window.gtag("event", "waitlist_join", {
-          method: "hero_form",
-        })
-      }
+
+      // Track successful join
+      event({
+        action: "waitlist_join",
+        category: "conversion",
+        label: "hero_section",
+      })
+
     } catch {
       setError("Already joined or invalid email.")
+
+      // Track form error
+      event({
+        action: "waitlist_form_error",
+        category: "conversion",
+        label: "hero_section",
+      })
+
     } finally {
       setLoading(false)
     }
   }
 
-
-  
   return (
     <div className="mt-10 w-full max-w-lg space-y-5">
 
-      {/* Premium Input Container */}
       <motion.div
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
@@ -65,6 +67,17 @@ export function WaitlistForm() {
         <input
           id="waitlist-email"
           value={email}
+          onFocus={() => {
+            if (!formStarted) {
+              setFormStarted(true)
+
+              event({
+                action: "waitlist_form_start",
+                category: "engagement",
+                label: "hero_section",
+              })
+            }
+          }}
           onChange={(e) => setEmail(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
           type="email"
@@ -80,7 +93,16 @@ export function WaitlistForm() {
         />
 
         <button
-          onClick={handleSubmit}
+          onClick={() => {
+            // Track CTA click
+            event({
+              action: "cta_hero_click",
+              category: "engagement",
+              label: "join_early_access",
+            })
+
+            handleSubmit()
+          }}
           disabled={loading}
           className="
             mr-2
@@ -99,7 +121,6 @@ export function WaitlistForm() {
         </button>
       </motion.div>
 
-      {/* Status Messages */}
       {success && (
         <p className="text-sm text-green-500">
           You’re on the list 🚀 We’ll notify you before launch.
@@ -112,7 +133,6 @@ export function WaitlistForm() {
         </p>
       )}
 
-      {/* Live Counter */}
       <p className="text-sm text-muted-foreground">
         <span className="text-primary font-semibold">
           {count}
