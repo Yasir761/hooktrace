@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     const [latency, retries, rejected, incoming, delivered, failed] = 
       await Promise.all([
         promRangeQuery(
-          "histogram_quantile(0.95, rate(hooktrace_delivery_latency_seconds_bucket[5m])) or vector(0)"
+          "histogram_quantile(0.95, sum(rate(hooktrace_delivery_latency_seconds_bucket[5m])) by (le)) or vector(0)"
         ),
         promRangeQuery(
           "rate(hooktrace_events_retried_total[5m]) or vector(0)"
