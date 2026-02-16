@@ -22,7 +22,6 @@ router = APIRouter()
 @router.post("/r/{token}/{route}", status_code=status.HTTP_202_ACCEPTED)
 async def relay(token: str, route: str, request: Request):
     raw_body = await request.body()
-    request.state.raw_body = raw_body
 
     try:
         payload = await request.json()
@@ -32,6 +31,7 @@ async def relay(token: str, route: str, request: Request):
     headers = dict(request.headers)
     idempotency_key = request.headers.get("idempotency-key")
     signature = request.headers.get("x-signature")
+    timestamp = request.headers.get("x-timestamp")
 
     provider = None
     if "stripe-signature" in request.headers:
@@ -56,8 +56,9 @@ async def relay(token: str, route: str, request: Request):
 
         route_secret = route_config["secret"]
 
-        # ---- Signature validation (skip in dev) ----
+        # 🔐 Signature validation
         if route_secret and route_config["mode"] != "dev":
+
             if provider == "stripe":
                 if not stripe_provider.verify(request, route_secret):
                     webhooks_invalid_signature.inc()
@@ -69,17 +70,45 @@ async def relay(token: str, route: str, request: Request):
                     return JSONResponse(status_code=401, content={"detail": "Invalid GitHub signature"})
 
             else:
-                if not signature or not verify_signature(route_secret, raw_body, signature):
+                if not signature:
+                    webhooks_invalid_signature.inc()
+                    return JSONResponse(status_code=401, content={"detail": "Missing signature"})
+
+                if not verify_signature(route_secret, raw_body, signature, timestamp):
                     webhooks_invalid_signature.inc()
                     return JSONResponse(status_code=401, content={"detail": "Invalid signature"})
 
-        # ---- Resolve delivery target ----
+        # 🧠 Idempotency Protection (DB-level dedupe)
+        if idempotency_key:
+            existing = db.execute(
+                text("""
+                    SELECT id FROM webhook_events
+                    WHERE token = :token
+                    AND route = :route
+                    AND idempotency_key = :key
+                """),
+                {
+                    "token": token,
+                    "route": route,
+                    "key": idempotency_key,
+                }
+            ).fetchone()
+
+            if existing:
+                webhooks_deduplicated.inc()
+                return {"accepted": True, "deduplicated": True}
+
+        # 🎯 Resolve delivery target
         delivery_target = (
             route_config["dev_target"]
             if route_config["mode"] == "dev"
             else route_config["prod_target"]
         )
 
+        if not delivery_target:
+            return JSONResponse(status_code=400, content={"detail": "No delivery target configured"})
+
+        # 📦 Persist event
         event = WebhookEvent(
             token=token,
             route=route,
@@ -97,7 +126,7 @@ async def relay(token: str, route: str, request: Request):
 
         webhooks_received.labels(token=token, route=route).inc()
 
-        print("ENQUEUE DEBUG: pushing to redis:", event.id)
+        # 🚚 Enqueue
         redis_client.lpush("webhook:queue", str(event.id))
 
         return {"accepted": True}
