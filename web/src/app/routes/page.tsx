@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react"
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL
+
 type Route = {
   id: number
   token: string
@@ -9,34 +11,41 @@ type Route = {
   mode: string
   dev_target?: string
   prod_target?: string
+  is_active?: boolean
   created_at: string
 }
 
 export default function RoutesPage() {
   const [routes, setRoutes] = useState<Route[]>([])
   const [routeName, setRouteName] = useState("")
+  const [loading, setLoading] = useState(false)
 
-  const API = process.env.NEXT_PUBLIC_API_URL
+  const fetchRoutes = async () => {
+    const res = await fetch(`${API_URL}/routes`)
+    const data = await res.json()
+    setRoutes(data.items || [])
+  }
 
   useEffect(() => {
-    const fetchRoutes = async () => {
-      const res = await fetch(`${API}/routes`, {
-        headers: {
-          Authorization: `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN ?? ""}`,
-        },
+    let cancelled = false
+
+    fetch(`${API_URL}/routes`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled) return
+        setRoutes(data.items || [])
       })
 
-      if (!res.ok) return
-
-      const data = await res.json()
-      setRoutes(data.items)
+    return () => {
+      cancelled = true
     }
-
-    fetchRoutes()
   }, [])
 
   const createRoute = async () => {
-    const res = await fetch(`${API}/routes`, {
+    if (!routeName) return
+    setLoading(true)
+
+    await fetch(`${API_URL}/routes`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -45,47 +54,107 @@ export default function RoutesPage() {
       body: JSON.stringify({ route: routeName }),
     })
 
-    if (!res.ok) {
-      alert("Failed")
-      return
-    }
+    setRouteName("")
+    await fetchRoutes()
+    setLoading(false)
+  }
 
-    alert("Route created!")
-    location.reload()
+  const deleteRoute = async (id: number) => {
+    await fetch(`${API_URL}/routes/${id}`, {
+      method: "DELETE",
+    })
+    fetchRoutes()
+  }
+
+  const toggleRoute = async (id: number) => {
+    await fetch(`${API_URL}/routes/${id}/toggle`, {
+      method: "PATCH",
+    })
+    fetchRoutes()
   }
 
   return (
-    <div className="p-8 max-w-4xl mx-auto space-y-8">
-      <h1 className="text-2xl font-semibold">Webhook Routes</h1>
+    <div className="max-w-4xl mx-auto p-8 space-y-10">
 
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-semibold">Webhook Routes</h1>
+        <p className="text-muted-foreground text-sm mt-1">
+          Manage your relay endpoints
+        </p>
+      </div>
+
+      {/* Create Route */}
       <div className="flex gap-3">
         <input
           value={routeName}
           onChange={(e) => setRouteName(e.target.value)}
           placeholder="order.created"
-          className="border px-3 py-2 rounded w-full"
+          className="border px-4 py-2 rounded-lg w-full"
         />
         <button
           onClick={createRoute}
-          className="bg-primary text-white px-4 py-2 rounded"
+          disabled={loading}
+          className="bg-primary text-white px-5 py-2 rounded-lg"
         >
-          Create
+          {loading ? "Creating..." : "Create"}
         </button>
       </div>
 
+      {/* Route List */}
       <div className="space-y-4">
         {routes.map((r) => (
-          <div key={r.id} className="border p-4 rounded-lg space-y-2">
-            <div className="font-medium">{r.route}</div>
-            <div className="text-sm text-muted-foreground">
-              Relay: <code>/r/{r.token}/{r.route}</code>
+          <div
+            key={r.id}
+            className="border rounded-xl p-5 flex justify-between items-center"
+          >
+            <div className="space-y-1">
+              <div className="flex items-center gap-3">
+                <span className="font-medium text-lg">
+                  {r.route}
+                </span>
+
+                <span className={`text-xs px-2 py-1 rounded-full ${
+                  r.is_active !== false
+                    ? "bg-green-100 text-green-700"
+                    : "bg-gray-200 text-gray-600"
+                }`}>
+                  {r.is_active !== false ? "Active" : "Disabled"}
+                </span>
+
+                <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700">
+                  {r.mode}
+                </span>
+              </div>
+
+              <div className="text-xs text-muted-foreground">
+                Relay: <code>{API_URL}/r/{r.token}/{r.route}</code>
+              </div>
+
+              <div className="text-xs text-muted-foreground">
+                Target: {r.mode === "dev" ? r.dev_target || "-" : r.prod_target || "-"}
+              </div>
             </div>
-            <div className="text-xs text-muted-foreground">
-              Mode: {r.mode}
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => toggleRoute(r.id)}
+                className="text-sm border px-3 py-1 rounded-md"
+              >
+                Toggle
+              </button>
+
+              <button
+                onClick={() => deleteRoute(r.id)}
+                className="text-sm border px-3 py-1 rounded-md text-red-600"
+              >
+                Delete
+              </button>
             </div>
           </div>
         ))}
       </div>
+
     </div>
   )
 }
