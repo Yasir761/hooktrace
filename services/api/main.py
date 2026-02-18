@@ -13,6 +13,7 @@ from events import router as events_router
 from ws import ConnectionManager
 from subscriber import start_redis_subscriber
 from route_management import router as routes_management_router
+from auth_routes import router as auth_router
 
 app = FastAPI(title="Hooktrace API")
 
@@ -37,6 +38,7 @@ app.include_router(relay_router)
 app.include_router(replay_router)
 app.include_router(events_router)
 app.include_router(routes_management_router)
+app.include_router(auth_router)
 
 # WebSocket
 manager = ConnectionManager()
