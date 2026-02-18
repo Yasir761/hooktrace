@@ -1,41 +1,246 @@
-from jose import jwt, JWTError
-from fastapi import Depends, HTTPException, Header
+from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi.responses import RedirectResponse
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy import text
 from database import SessionLocal
+from passlib.context import CryptContext
+from jose import jwt, JWTError
+from pydantic import BaseModel, EmailStr
+from datetime import datetime, timedelta
+from authlib.integrations.starlette_client import OAuth
+import uuid
 import os
 
-SECRET_KEY = os.getenv("JWT_SECRET", "supersecret")
-ALGORITHM = "HS256"
+router = APIRouter(prefix="/auth", tags=["auth"])
+
+# -----------------------------
+# Config
+# -----------------------------
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+JWT_SECRET = os.getenv("JWT_SECRET", "supersecret")
+JWT_ALGO = "HS256"
+JWT_EXPIRY_HOURS = 24
+
+security = HTTPBearer()
+
+# -----------------------------
+# Schemas
+# -----------------------------
+
+class RegisterSchema(BaseModel):
+    email: EmailStr
+    password: str
 
 
-def create_access_token(user_id: str):
-    return jwt.encode({"sub": user_id}, SECRET_KEY, algorithm=ALGORITHM)
+class LoginSchema(BaseModel):
+    email: EmailStr
+    password: str
 
 
-def get_current_user(authorization: str = Header(None)):
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing token")
+# -----------------------------
+# JWT Helpers
+# -----------------------------
 
-    token = authorization.split(" ")[1]
+def create_token(user_id: str):
+    payload = {
+        "sub": user_id,
+        "exp": datetime.utcnow() + timedelta(hours=JWT_EXPIRY_HOURS),
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGO)
 
+
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id = payload.get("sub")
-        if not user_id:
-            raise HTTPException(status_code=401, detail="Invalid token")
+        payload = jwt.decode(
+            credentials.credentials,
+            JWT_SECRET,
+            algorithms=[JWT_ALGO],
+        )
+        return payload["sub"]
     except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
 
+
+# -----------------------------
+# Register
+# -----------------------------
+
+@router.post("/register")
+def register(data: RegisterSchema):
+    db = SessionLocal()
+    try:
+        hashed = pwd_context.hash(data.password)
+
+        user_id = str(uuid.uuid4())
+        api_key = str(uuid.uuid4())
+
+        db.execute(
+            text("""
+                INSERT INTO users (id, email, password_hash, api_key, provider)
+                VALUES (:id, :email, :password, :api_key, 'local')
+            """),
+            {
+                "id": user_id,
+                "email": data.email,
+                "password": hashed,
+                "api_key": api_key,
+            }
+        )
+        db.commit()
+
+        token = create_token(user_id)
+        return {"token": token}
+
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="User already exists")
+
+    finally:
+        db.close()
+
+
+# -----------------------------
+# Login
+# -----------------------------
+
+@router.post("/login")
+def login(data: LoginSchema):
     db = SessionLocal()
     try:
         user = db.execute(
-            text("SELECT id FROM users WHERE id = :id"),
-            {"id": user_id}
+            text("SELECT id, password_hash FROM users WHERE email = :email"),
+            {"email": data.email},
         ).fetchone()
 
         if not user:
-            raise HTTPException(status_code=401, detail="User not found")
+            raise HTTPException(status_code=401, detail="Invalid credentials")
 
-        return user_id
+        user_id, password_hash = user
+
+        if not pwd_context.verify(data.password, password_hash):
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+
+        token = create_token(user_id)
+        return {"token": token}
+
+    finally:
+        db.close()
+
+
+# -----------------------------
+# OAuth Setup
+# -----------------------------
+
+oauth = OAuth()
+
+oauth.register(
+    name="google",
+    client_id=os.getenv("GOOGLE_CLIENT_ID"),
+    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
+    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+    client_kwargs={"scope": "openid email profile"},
+)
+
+oauth.register(
+    name="github",
+    client_id=os.getenv("GITHUB_CLIENT_ID"),
+    client_secret=os.getenv("GITHUB_CLIENT_SECRET"),
+    access_token_url="https://github.com/login/oauth/access_token",
+    authorize_url="https://github.com/login/oauth/authorize",
+    api_base_url="https://api.github.com/",
+    client_kwargs={"scope": "user:email"},
+)
+
+
+# -----------------------------
+# OAuth Login
+# -----------------------------
+
+@router.get("/login/{provider}")
+async def oauth_login(request: Request, provider: str):
+    redirect_uri = request.url_for("oauth_callback", provider=provider)
+    return await oauth.create_client(provider).authorize_redirect(request, redirect_uri)
+
+
+@router.get("/callback/{provider}")
+async def oauth_callback(request: Request, provider: str):
+    client = oauth.create_client(provider)
+    token = await client.authorize_access_token(request)
+
+    if provider == "google":
+        user = await client.parse_id_token(request, token)
+        email = user["email"]
+        provider_id = user["sub"]
+        avatar = user.get("picture")
+
+    elif provider == "github":
+        # Get profile
+        resp = await client.get("user", token=token)
+        profile = resp.json()
+
+        provider_id = str(profile["id"])
+        avatar = profile.get("avatar_url")
+
+        # Proper email fetch
+        emails_resp = await client.get("user/emails", token=token)
+        emails = emails_resp.json()
+        email = next(
+            (e["email"] for e in emails if e["primary"]),
+            None
+        )
+
+    else:
+        raise HTTPException(status_code=400, detail="Invalid provider")
+
+    db = SessionLocal()
+
+    try:
+        existing = db.execute(
+            text("""
+                SELECT id FROM users
+                WHERE provider = :provider
+                AND provider_id = :provider_id
+            """),
+            {"provider": provider, "provider_id": provider_id},
+        ).fetchone()
+
+        if existing:
+            user_id = existing[0]
+        else:
+            user_id = str(uuid.uuid4())
+            api_key = str(uuid.uuid4())
+
+            db.execute(
+                text("""
+                    INSERT INTO users (
+                        id, email, provider, provider_id,
+                        avatar_url, api_key
+                    )
+                    VALUES (
+                        :id, :email, :provider, :provider_id,
+                        :avatar, :api_key
+                    )
+                """),
+                {
+                    "id": user_id,
+                    "email": email,
+                    "provider": provider,
+                    "provider_id": provider_id,
+                    "avatar": avatar,
+                    "api_key": api_key,
+                },
+            )
+            db.commit()
+
+        jwt_token = create_token(user_id)
+
+        return RedirectResponse(
+            f"http://localhost:3000/oauth-success?token={jwt_token}"
+        )
+
     finally:
         db.close()
