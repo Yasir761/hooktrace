@@ -1,10 +1,10 @@
 "use client"
 
-import { useSearchParams } from "next/navigation"
+import { Suspense } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
 import { useEffect } from "react"
-import { useRouter } from "next/navigation"
 
-export default function SuccessPage() {
+function SuccessContent() {
   const params = useSearchParams()
   const router = useRouter()
   const token = params.get("token")
@@ -17,4 +17,12 @@ export default function SuccessPage() {
   }, [token, router])
 
   return <p className="p-8">Signing you in...</p>
+}
+
+export default function SuccessPage() {
+  return (
+    <Suspense fallback={<p className="p-8">Signing you in...</p>}>
+      <SuccessContent />
+    </Suspense>
+  )
 }
