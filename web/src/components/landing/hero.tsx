@@ -1,3 +1,7 @@
+// 
+
+
+
 "use client"
 
 import Image from "next/image"
@@ -31,6 +35,7 @@ export function Hero() {
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
+
   return (
     <section
       id="waitlist"
@@ -46,13 +51,10 @@ export function Hero() {
         overflow-hidden
       "
     >
-      {/* Glow */}
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_center,_hsl(var(--primary)/0.22),_transparent_70%)]" />
 
-      {/* Subtle grid */}
       <div className="absolute inset-0 -z-20 opacity-[0.025] bg-[linear-gradient(to_right,#fff_1px,transparent_1px),linear-gradient(to_bottom,#fff_1px,transparent_1px)] bg-[size:42px_42px]" />
 
-      {/* Content Wrapper */}
       <div className="w-full max-w-4xl flex flex-col items-center">
 
         {/* Logo */}
@@ -60,7 +62,7 @@ export function Hero() {
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.4 }}
-          className="mb-8 sm:mb-10"
+          className="mb-6 sm:mb-8"
         >
           <Image
             src="/logo.png"
@@ -75,11 +77,34 @@ export function Hero() {
           />
         </motion.div>
 
+        {/* GitHub Badge */}
+        <motion.a
+          href="https://www.github.com/yasir761/hooktrace"
+          target="_blank"
+          rel="noopener noreferrer"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="
+            mb-8
+            inline-flex items-center gap-2
+            rounded-full
+            border border-border
+            px-4 py-1.5
+            text-xs font-medium
+            text-muted-foreground
+            hover:bg-muted
+            transition
+          "
+        >
+          ⭐ Open Source on GitHub
+        </motion.a>
+
         {/* Headline */}
         <motion.h1
           initial={{ y: 25, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.1 }}
+          transition={{ delay: 0.15 }}
           className="
             text-2xl sm:text-4xl md:text-6xl
             font-semibold
@@ -88,9 +113,9 @@ export function Hero() {
             max-w-3xl
           "
         >
-          Webhooks fail.{" "}
+          Webhook failures happen.{" "}
           <span className="text-primary">
-            You shouldn&apos;t.
+            See them instantly.
           </span>
         </motion.h1>
 
@@ -98,7 +123,7 @@ export function Hero() {
         <motion.p
           initial={{ y: 25, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.2 }}
+          transition={{ delay: 0.25 }}
           className="
             mt-5 sm:mt-6
             text-muted-foreground
@@ -107,16 +132,15 @@ export function Hero() {
             leading-relaxed
           "
         >
-          Stop losing webhook events in silence.
-          HookTrace gives you visibility, retries, and control
-          over every delivery.
+         Open-source webhook debugging.
+         See failures. Replay events. Fix them fast.
         </motion.p>
 
         {/* Waitlist */}
         <motion.div
           initial={{ y: 25, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.3 }}
+          transition={{ delay: 0.35 }}
           className="mt-8 sm:mt-10 w-full flex justify-center"
         >
           <WaitlistForm />
@@ -132,7 +156,6 @@ export function Hero() {
           <LaunchCountdown />
         </motion.div>
 
-        {/* Trust Line */}
         <p className="mt-8 text-xs text-muted-foreground">
           No spam. No noise. Just webhook reliability.
         </p>

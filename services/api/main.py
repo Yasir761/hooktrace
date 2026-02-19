@@ -3,21 +3,28 @@ from fastapi.middleware.cors import CORSMiddleware
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 from threading import Thread
 
-import metrics  
-
 from database import Base, engine
 from health import router as health_router
 from routes import router as relay_router
 from replay import router as replay_router
 from events import router as events_router
+from route_management import router as routes_management_router
+from auth import router as auth_router
 from ws import ConnectionManager
 from subscriber import start_redis_subscriber
-from route_management import router as routes_management_router
-from auth_routes import router as auth_router
+
+import metrics
+
+# -----------------------------
+# App Init
+# -----------------------------
 
 app = FastAPI(title="Hooktrace API")
 
+# -----------------------------
 # CORS
+# -----------------------------
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -29,18 +36,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# DB init
+# -----------------------------
+# DB Init
+# -----------------------------
+
 Base.metadata.create_all(bind=engine)
 
+# -----------------------------
 # Routers
+# -----------------------------
+
+app.include_router(auth_router)
+app.include_router(routes_management_router)
 app.include_router(health_router)
 app.include_router(relay_router)
 app.include_router(replay_router)
 app.include_router(events_router)
-app.include_router(routes_management_router)
-app.include_router(auth_router)
 
+# -----------------------------
 # WebSocket
+# -----------------------------
+
 manager = ConnectionManager()
 
 @app.on_event("startup")
@@ -60,7 +76,10 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         manager.disconnect(websocket)
 
+# -----------------------------
 # Metrics
+# -----------------------------
+
 @app.get("/metrics")
 def metrics_endpoint():
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)

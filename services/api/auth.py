@@ -7,7 +7,9 @@ from passlib.context import CryptContext
 from jose import jwt, JWTError
 from pydantic import BaseModel, EmailStr
 from datetime import datetime, timedelta
+from fastapi import Response
 from authlib.integrations.starlette_client import OAuth
+from fastapi import Cookie
 import uuid
 import os
 
@@ -51,19 +53,19 @@ def create_token(user_id: str):
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGO)
 
 
-def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-):
+def get_current_user(access_token: str = Cookie(None)):
+    if not access_token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
     try:
         payload = jwt.decode(
-            credentials.credentials,
+            access_token,
             JWT_SECRET,
             algorithms=[JWT_ALGO],
         )
         return payload["sub"]
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
-
 
 # -----------------------------
 # Register
@@ -93,7 +95,18 @@ def register(data: RegisterSchema):
         db.commit()
 
         token = create_token(user_id)
-        return {"token": token}
+        response = JSONResponse({"success": True})
+
+response.set_cookie(
+    key="access_token",
+    value=token,
+    httponly=True,
+    secure=False,
+    samesite="lax",
+    max_age=60 * 60 * 24,
+)
+
+return response
 
     except Exception:
         db.rollback()
@@ -129,6 +142,17 @@ def login(data: LoginSchema):
 
     finally:
         db.close()
+
+
+
+# Logout
+
+
+@router.post("/logout")
+def logout():
+    response = JSONResponse({"success": True})
+    response.delete_cookie("access_token")
+    return response
 
 
 # -----------------------------
@@ -238,9 +262,18 @@ async def oauth_callback(request: Request, provider: str):
 
         jwt_token = create_token(user_id)
 
-        return RedirectResponse(
-            f"http://localhost:3000/oauth-success?token={jwt_token}"
-        )
+        response = RedirectResponse("http://localhost:3000/dashboard")
+
+    response.set_cookie(
+    key="access_token",
+    value=jwt_token,
+    httponly=True,
+    secure=False,
+    samesite="lax",
+    max_age=60 * 60 * 24,
+)
+
+return response
 
     finally:
         db.close()
