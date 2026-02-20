@@ -329,6 +329,6 @@ Built with modern webhook best practices and a focus on developer experience.
 
 ⭐ Star us on GitHub — it helps!
 
-[Report Bug](https://github.com/Yasir761/hooktrace/issues) • [Request Feature](https://github.com/Yasir761/hooktrace/issues) • [View Demo](https://demo.hooktrace.dev)
+[Report Bug](https://github.com/Yasir761/hooktrace/issues) • [Request Feature](https://github.com/Yasir761/hooktrace/issues) 
 
 </div>
