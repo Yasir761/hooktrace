@@ -5,5 +5,9 @@ psycopg2-binary
 redis
 prometheus-client
 stripe
-
+authlib
+passlib[bcrypt]
+httpx
+python-jose[cryptography]
+email-validator
 

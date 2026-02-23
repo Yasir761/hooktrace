@@ -10,11 +10,30 @@ import { useState } from "react"
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setIsLoading(true)
-    // Handle login logic
-    setTimeout(() => setIsLoading(false), 1000)
+  
+    const form = e.currentTarget
+    const email = (form.elements.namedItem("email") as HTMLInputElement).value
+    const password = (form.elements.namedItem("password") as HTMLInputElement).value
+  
+    try {
+      const res = await fetch("http://localhost:3001/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email, password }),
+      })
+  
+      if (res.ok) {
+        window.location.href = "/dashboard"
+      }
+    } catch (err) {
+      console.error(err)
+    }
+  
+    setIsLoading(false)
   }
 
   return (
