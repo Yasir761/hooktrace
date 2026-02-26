@@ -164,6 +164,19 @@ export function Hero() {
         </p>
 
       </div>
+
+      {/* Codilad Credit */}
+<p className="mt-3 text-xs text-muted-foreground">
+  A product by{" "}
+  <a
+    href="https://codilad.dev"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="underline underline-offset-4 hover:text-foreground transition"
+  >
+    codilad.dev
+  </a>
+</p>
     </section>
   )
 }
