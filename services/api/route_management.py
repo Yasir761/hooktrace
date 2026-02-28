@@ -32,6 +32,10 @@ def create_route(
     user_id: str = Depends(get_current_user)
 ):
     route_name = payload.get("route")
+    mode = payload.get("mode", "dev")
+    dev_target = payload.get("dev_target")
+    prod_target = payload.get("prod_target")
+
     if not route_name:
         raise HTTPException(status_code=400, detail="Route required")
 
@@ -43,13 +47,16 @@ def create_route(
         db.execute(
             text("""
                 INSERT INTO webhook_routes
-                (token, route, secret, mode, user_id)
-                VALUES (:token, :route, :secret, 'dev', :user_id)
+                (token, route, secret, mode, dev_target, prod_target, user_id)
+                VALUES (:token, :route, :secret, :mode, :dev_target, :prod_target, :user_id)
             """),
             {
                 "token": token,
                 "route": route_name,
                 "secret": secret,
+                "mode": mode,
+                "dev_target": dev_target,
+                "prod_target": prod_target,
                 "user_id": user_id,
             }
         )

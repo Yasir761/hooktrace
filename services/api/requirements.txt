@@ -6,7 +6,8 @@ redis
 prometheus-client
 stripe
 authlib
-passlib[bcrypt]
+passlib
+argon2-cffi
 httpx
 python-jose[cryptography]
 email-validator

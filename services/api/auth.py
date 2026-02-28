@@ -1442,7 +1442,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 # Config
 # -----------------------------
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 JWT_SECRET = os.getenv("JWT_SECRET", "supersecret")
 JWT_ALGO = "HS256"
@@ -1536,9 +1536,10 @@ def register(data: RegisterSchema):
         set_auth_cookie(response, token)
         return response
 
-    except Exception:
+    except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail="User already exists")
+        print("REGISTER ERROR:", repr(e))
+        raise HTTPException(status_code=400, detail=repr(e))
 
     finally:
         db.close()
@@ -1561,6 +1562,7 @@ def login(data: LoginSchema):
             raise HTTPException(status_code=401, detail="Invalid credentials")
 
         user_id, password_hash = user
+        user_id = str(user_id)
 
         if not pwd_context.verify(data.password, password_hash):
             raise HTTPException(status_code=401, detail="Invalid credentials")
