@@ -11,4 +11,5 @@ argon2-cffi
 httpx
 python-jose[cryptography]
 email-validator
+alembic
 
