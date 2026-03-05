@@ -1,44 +1,63 @@
-from sqlalchemy import Column, Integer, String, JSON, DateTime, Text
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+from sqlalchemy.types import JSON
+import uuid
+
 from database import Base
 
-class WebhookEvent(Base):
-    __tablename__ = "webhook_events"
 
-    id = Column(Integer, primary_key=True, index=True)
+class User(Base):
+    __tablename__ = "users"
 
-    token = Column(String, index=True, nullable=False)
-    route = Column(String, index=True, nullable=False)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
+    email = Column(Text, unique=True, nullable=False)
+    api_key = Column(Text, unique=True, nullable=False)
 
-    provider = Column(String, nullable=True)
-
-    headers = Column(JSON, nullable=False)
-    payload = Column(JSON, nullable=False)
-
-    status = Column(String, default="pending", index=True)
-
-    attempt_count = Column(Integer, default=0)
-    next_retry_at = Column(DateTime(timezone=True), nullable=True)
-    last_error = Column(Text, nullable=True)
-
-    delivery_target = Column(String, nullable=True)
-
-    idempotency_key = Column(String, nullable=True, index=True)
+    password_hash = Column(Text)
+    provider = Column(Text, default="local")
+    provider_id = Column(Text)
+    avatar_url = Column(Text)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    routes = relationship("WebhookRoute", back_populates="user")
 
 
 class WebhookRoute(Base):
     __tablename__ = "webhook_routes"
 
     id = Column(Integer, primary_key=True)
-    token = Column(String, index=True, nullable=False)
-    route = Column(String, index=True, nullable=False)
+    token = Column(String, nullable=False)
+    route = Column(String, nullable=False)
 
-    secret = Column(String, nullable=True)
+    secret = Column(String)
+    mode = Column(String, default="dev")
 
-    mode = Column(String, default="prod")  # dev | prod
-    dev_target = Column(String, nullable=True)
-    prod_target = Column(String, nullable=True)
+    dev_target = Column(String)
+    prod_target = Column(String)
+
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    user = relationship("User", back_populates="routes")
+    events = relationship("WebhookEvent", back_populates="route")
+
+
+class WebhookEvent(Base):
+    __tablename__ = "webhook_events"
+
+    id = Column(Integer, primary_key=True)
+    route_id = Column(Integer, ForeignKey("webhook_routes.id"))
+
+    headers = Column(JSON)
+    payload = Column(JSON)
+
+    status = Column(String, default="pending")
+    idempotency_key = Column(String)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    route = relationship("WebhookRoute", back_populates="events")

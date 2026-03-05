@@ -43,55 +43,73 @@ async def relay(token: str, route: str, request: Request):
 
     try:
         route_config = db.execute(
-            text("""
-                SELECT secret, mode, dev_target, prod_target
+            text(
+                """
+                SELECT id, secret, mode, dev_target, prod_target
                 FROM webhook_routes
                 WHERE token = :token AND route = :route
-            """),
+                """
+            ),
             {"token": token, "route": route},
         ).mappings().first()
 
         if not route_config:
-            return JSONResponse(status_code=404, content={"detail": "Route not found"})
+            return JSONResponse(
+                status_code=404, content={"detail": "Route not found"}
+            )
 
+        route_id = route_config["id"]
         route_secret = route_config["secret"]
 
-        # 🔐 Signature validation
+        # Signature validation
         if route_secret and route_config["mode"] != "dev":
-
             if provider == "stripe":
                 if not stripe_provider.verify(request, route_secret):
                     webhooks_invalid_signature.inc()
-                    return JSONResponse(status_code=401, content={"detail": "Invalid Stripe signature"})
+                    return JSONResponse(
+                        status_code=401,
+                        content={"detail": "Invalid Stripe signature"},
+                    )
 
             elif provider == "github":
                 if not github_provider.verify(request, route_secret):
                     webhooks_invalid_signature.inc()
-                    return JSONResponse(status_code=401, content={"detail": "Invalid GitHub signature"})
+                    return JSONResponse(
+                        status_code=401,
+                        content={"detail": "Invalid GitHub signature"},
+                    )
 
             else:
                 if not signature:
                     webhooks_invalid_signature.inc()
-                    return JSONResponse(status_code=401, content={"detail": "Missing signature"})
+                    return JSONResponse(
+                        status_code=401,
+                        content={"detail": "Missing signature"},
+                    )
 
-                if not verify_signature(route_secret, raw_body, signature, timestamp):
+                if not verify_signature(
+                    route_secret, raw_body, signature, timestamp
+                ):
                     webhooks_invalid_signature.inc()
-                    return JSONResponse(status_code=401, content={"detail": "Invalid signature"})
+                    return JSONResponse(
+                        status_code=401,
+                        content={"detail": "Invalid signature"},
+                    )
 
         # 🧠 Idempotency Protection (DB-level dedupe)
         if idempotency_key:
             existing = db.execute(
-                text("""
+                text(
+                    """
                     SELECT id FROM webhook_events
-                    WHERE token = :token
-                    AND route = :route
-                    AND idempotency_key = :key
-                """),
+WHERE route_id = :route_id
+AND idempotency_key = :key
+                    """
+                ),
                 {
-                    "token": token,
-                    "route": route,
+                    "route_id": route_id,
                     "key": idempotency_key,
-                }
+                },
             ).fetchone()
 
             if existing:
@@ -106,19 +124,19 @@ async def relay(token: str, route: str, request: Request):
         )
 
         if not delivery_target:
-            return JSONResponse(status_code=400, content={"detail": "No delivery target configured"})
+            return JSONResponse(
+                status_code=400,
+                content={"detail": "No delivery target configured"},
+            )
 
         # 📦 Persist event
         event = WebhookEvent(
-            token=token,
-            route=route,
-            provider=provider,
-            headers=headers,
-            payload=payload,
-            status="pending",
-            idempotency_key=idempotency_key,
-            delivery_target=delivery_target,
-        )
+    route_id=route_id,
+    headers=headers,
+    payload=payload,
+    status="pending",
+    idempotency_key=idempotency_key
+)
 
         db.add(event)
         db.commit()
