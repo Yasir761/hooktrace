@@ -6,9 +6,9 @@ from auth import get_current_user
 router = APIRouter(prefix="/events", tags=["events"])
 
 
-# =============================
+
 # LIST EVENTS (USER ISOLATED)
-# =============================
+
 @router.get("/")
 def list_events(
     status: str | None = None,
