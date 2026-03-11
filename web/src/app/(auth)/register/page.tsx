@@ -19,21 +19,29 @@ export default function RegisterPage() {
     const password = (form.elements.namedItem("password") as HTMLInputElement).value
   
     try {
-      const res = await fetch("http://localhost:3001/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email, password }),
-      })
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/auth/register`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ email, password }),
+        }
+      )
   
-      if (res.ok) {
-        window.location.href = "/dashboard"
+      const data = await res.json()
+      if (!res.ok) {
+        alert(data.detail || "An error occurred")
+        setIsLoading(false)
+        return
       }
-    } catch (err) {
-      console.error(err)
+        window.location.href = "/dashboard"
+    } catch (error) {
+      console.error(error)
+      alert(error instanceof Error ? error.message : "An error occurred")
+    } finally {
+      setIsLoading(false)
     }
-  
-    setIsLoading(false)
   }
 
   return (
@@ -123,7 +131,7 @@ export default function RegisterPage() {
           {/* Social Login Buttons */}
           <div className="space-y-3">
             <a
-              href="http://localhost:3001/auth/login/google"
+              href={`${process.env.NEXT_PUBLIC_API_URL}/auth/login/google`}
               className="flex items-center justify-center gap-3 w-full border border-border rounded-lg px-4 py-3 text-sm font-medium hover:bg-accent transition-all hover:shadow-sm"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -148,7 +156,7 @@ export default function RegisterPage() {
             </a>
 
             <a
-              href="http://localhost:3001/auth/login/github"
+              href={`${process.env.NEXT_PUBLIC_API_URL}/auth/login/github`}
               className="flex items-center justify-center gap-3 w-full border border-border rounded-lg px-4 py-3 text-sm font-medium hover:bg-accent transition-all hover:shadow-sm"
             >
               <Github className="w-5 h-5" />
@@ -177,6 +185,7 @@ export default function RegisterPage() {
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
+                name="email"
                   id="email"
                   type="email"
                   placeholder="you@company.com"
@@ -193,6 +202,7 @@ export default function RegisterPage() {
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
+                name="password"
                   id="password"
                   type="password"
                   placeholder="Create a strong password"
