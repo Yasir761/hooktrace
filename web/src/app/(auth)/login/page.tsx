@@ -36,7 +36,7 @@ export default function LoginPage() {
         return
       }
 
-      window.location.href = "/dashboard"
+      window.location.replace("/dashboard")
     } catch (error) {
       console.error(error)
       alert(error instanceof Error ? error.message : "An error occurred")

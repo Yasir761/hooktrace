@@ -281,3 +281,44 @@ async def oauth_callback(request: Request, provider: str):
 
     finally:
         db.close()
+
+
+
+# -----------------------------
+# Get Current User
+# -----------------------------
+ 
+@router.get("/me")
+def get_me(user_id: str = Depends(get_current_user)):
+    """Get current authenticated user"""
+    db = SessionLocal()
+    try:
+        user = db.execute(
+            text("""
+                SELECT id, email, avatar_url, provider
+                FROM users
+                WHERE id = :user_id
+            """),
+            {"user_id": user_id},
+        ).fetchone()
+ 
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+ 
+        return {
+            "id": str(user[0]),
+            "email": user[1],
+            "avatar_url": user[2],
+            "provider": user[3],
+        }
+    finally:
+        db.close()
+ 
+ 
+# Update get_current_user to use Depends
+from fastapi import Depends
+ 
+# Change the get_current_user function signature:
+def get_current_user(access_token: str = Cookie(None)) -> str:
+    # ... existing code
+    return payload["sub"]
