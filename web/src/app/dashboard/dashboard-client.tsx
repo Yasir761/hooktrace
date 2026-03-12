@@ -752,6 +752,7 @@ import {
   CartesianGrid,
 } from "recharts"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { UserNav } from "@/components/user-nav"
 
 /* ------------------ Motion ------------------ */
 
@@ -786,13 +787,19 @@ type MetricsData = {
 
 export default function DashboardClient({
   stats,
-  successSeries,
-  failureSeries,
+  user,
+  successSeries = [],
+  failureSeries = [],
 }: {
   stats: { label: string; value: number }[]
-  successSeries: [number, string][]
-  failureSeries: [number, string][]
-}) {
+  user: {
+    email: string
+    avatar_url?: string
+    name?: string
+  }
+  successSeries?: [number, string][]
+  failureSeries?: [number, string][]
+})   {
   const [metrics, setMetrics] = useState<MetricsData | null>(null)
   const [isLive, setIsLive] = useState(true)
 
@@ -878,19 +885,20 @@ export default function DashboardClient({
               <ThemeToggle />
               
               <button
-                onClick={() => setIsLive(!isLive)}
-                className={`
-                  flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
-                  transition-colors
-                  ${isLive
-                    ? "bg-emerald-500 hover:bg-emerald-600 text-white"
-                    : "bg-muted hover:bg-muted/80"
-                  }
-                `}
-              >
-                <Circle className={`w-2 h-2 fill-current ${isLive ? "animate-pulse" : ""}`} />
-                {isLive ? "Live" : "Paused"}
-              </button>
+    onClick={() => setIsLive(!isLive)}
+    className={`
+      flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
+      transition-colors
+      ${isLive
+        ? "bg-emerald-500 hover:bg-emerald-600 text-white"
+        : "bg-muted hover:bg-muted/80"
+      }
+    `}
+  >
+    <Circle className={`w-2 h-2 fill-current ${isLive ? "animate-pulse" : ""}`} />
+    {isLive ? "Live" : "Paused"}
+  </button>
+  <UserNav user={user} />
             </div>
           </div>
 
