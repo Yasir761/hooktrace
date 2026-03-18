@@ -399,6 +399,19 @@ async def relay(token: str, route: str, request: Request):
         provider = "stripe"
     elif "x-hub-signature-256" in request.headers:
         provider = "github"
+    elif "x-razorpay-signature" in request.headers:
+        provider = "razorpay"
+    elif "x-shopify-hmac-sha256" in request.headers:
+        provider = "shopify"
+    elif "x-slack-signature" in request.headers:
+        provider = "slack"
+    elif "x-signature-ed25519" in request.headers:
+        provider = "discord"
+    elif "x-notion-signature" in request.headers:
+        provider = "notion"
+    elif "x-supabase-signature" in request.headers:
+        provider = "supabase"
+    
 
     db: Session = SessionLocal()
 

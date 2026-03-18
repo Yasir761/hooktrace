@@ -13,4 +13,7 @@ python-jose[cryptography]
 email-validator
 alembic
 itsdangerous
+supabase
+supabase-py
+pynacl
 
