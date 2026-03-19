@@ -90,3 +90,24 @@ async def websocket_endpoint(websocket: WebSocket):
 @app.get("/metrics")
 def metrics_endpoint():
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
+
+
+
+tunnels = {}
+
+@app.websocket("/ws/tunnel/{token}")
+async def websocket_tunnel(websocket: WebSocket, token: str):
+    await websocket.accept()
+
+    tunnels[token] = websocket
+
+    print(f"[tunnel] connected: {token}")
+
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        print(f"[tunnel] disconnected: {token}")
+        tunnels.pop(token, None)

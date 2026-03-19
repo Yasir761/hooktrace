@@ -15,3 +15,24 @@ class ConnectionManager:
     async def broadcast(self, message: str):
         for connection in self.active_connections:
             await connection.send_text(message)
+
+
+
+
+class ConnectionManager:
+
+    def __init__(self):
+        self.connections = {}
+
+    async def connect(self, websocket, token):
+        await websocket.accept()
+        self.connections[token] = websocket
+
+    def disconnect(self, token):
+        self.connections.pop(token, None)
+
+    async def send_to_token(self, token, data):
+        ws = self.connections.get(token)
+
+        if ws:
+            await ws.send_json(data)

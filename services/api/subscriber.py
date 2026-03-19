@@ -26,3 +26,23 @@ def start_redis_subscriber(manager):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     loop.run_until_complete(_subscriber_loop(manager))
+
+
+
+
+def start_tunnel_subscriber(manager):
+    pubsub = redis_client.pubsub()
+    pubsub.psubscribe("tunnel:*")
+
+    print("[tunnel] subscriber started")
+
+    for message in pubsub.listen():
+        if message["type"] != "pmessage":
+            continue
+
+        channel = message["channel"].decode()
+        token = channel.split(":")[1]
+
+        data = json.loads(message["data"])
+
+        manager.send_to_token(token, data)
