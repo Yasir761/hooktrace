@@ -309,6 +309,9 @@ from database import SessionLocal
 from redis_client import redis_client
 from retry_policy import next_retry_time
 
+
+
+
 from prometheus_client import start_http_server  # type: ignore[import]
 
 from metrics import (
@@ -334,7 +337,6 @@ def publish_update(event_id: int, status: str, attempt: int = 0):
         })
     )
 
-
 def deliver_event(event_id: int):
     db = SessionLocal()
 
@@ -343,6 +345,7 @@ def deliver_event(event_id: int):
             text("""
                 SELECT 
                     e.*,
+                    r.id as route_id,
                     r.token,
                     r.route,
                     r.mode,
@@ -358,6 +361,16 @@ def deliver_event(event_id: int):
         if not row:
             print(f"[worker] Event {event_id} not found")
             return
+
+        # fetch delivery targets for this route
+        targets = db.execute(
+            text("""
+                SELECT type, config
+                FROM webhook_targets
+                WHERE route_id = :route_id
+            """),
+            {"route_id": row["route_id"]},
+        ).mappings().all()
 
         # DEV MODE LOCAL FORWARDING
         if row["mode"] == "dev":
@@ -388,111 +401,131 @@ def deliver_event(event_id: int):
             except Exception as e:
                 print(f"[worker] tunnel forwarding failed: {e}")
 
-        destination_url = row.get("prod_target") or row.get("dev_target")
+        # MULTI TARGET DELIVERY
+        delivery_failed = False
+        for target in targets:
 
-        if not destination_url:
-            print(f"[worker] No delivery target for event {event_id}")
-            return
+            ttype = target["type"]
+            config = target["config"]
 
-        try:
-            start = time.time()
+            try:
 
-            resp = requests.post(
-                destination_url,
-                json=row["payload"],
-                headers=row["headers"],
-                timeout=10,
-            )
+                if ttype == "http":
 
-            duration_ms = int((time.time() - start) * 1000)
-            delivery_latency.observe(duration_ms / 1000)
+                    start = time.time()
 
-            # AUDIT LOG
-            db.execute(
-                text("""
-                    INSERT INTO webhook_delivery_logs
-                    (event_id, status_code, response_body, duration_ms)
-                    VALUES (:event_id, :status_code, :body, :duration)
-                """),
-                {
-                    "event_id": event_id,
-                    "status_code": resp.status_code,
-                    "body": resp.text[:2000],
-                    "duration": duration_ms,
-                },
-            )
+                    resp = requests.post(
+                        config["url"],
+                        json=row["payload"],
+                        headers=row["headers"],
+                        timeout=10,
+                    )
 
-            if resp.status_code < 300:
-                db.execute(
-                    text("UPDATE webhook_events SET status = 'delivered' WHERE id = :id"),
-                    {"id": event_id},
-                )
-                db.commit()
+                    duration_ms = int((time.time() - start) * 1000)
+                    delivery_latency.observe(duration_ms / 1000)
 
-                events_delivered.inc()
-                publish_update(event_id, "delivered", row.get("attempt_count", 0))
+                    db.execute(
+                        text("""
+                            INSERT INTO webhook_delivery_logs
+                            (event_id, status_code, response_body, duration_ms)
+                            VALUES (:event_id, :status_code, :body, :duration)
+                        """),
+                        {
+                            "event_id": event_id,
+                            "status_code": resp.status_code,
+                            "body": resp.text[:2000],
+                            "duration": duration_ms,
+                        },
+                    )
 
-                print(f"[worker] Event {event_id} → delivered")
-                return
+                elif ttype == "redis":
 
-            raise Exception(f"HTTP {resp.status_code}")
+                    redis_client.lpush(
+                        config["queue"],
+                        json.dumps(row["payload"])
+                    )
 
-        except Exception as e:
-            attempt = (row.get("attempt_count") or 0) + 1
-            max_retries = row.get("max_retries", 5)
+                elif ttype == "kafka":
 
-            # AUDIT LOG FOR FAILURES
-            db.execute(
-                text("""
-                    INSERT INTO webhook_delivery_logs
-                    (event_id, status_code, response_body, duration_ms)
-                    VALUES (:event_id, :status_code, :body, :duration)
-                """),
-                {
-                    "event_id": event_id,
-                    "status_code": 0,
-                    "body": str(e)[:2000],
-                    "duration": 0,
-                },
-            )
+                    from kafka import KafkaProducer
 
-            if attempt < max_retries:
-                print(f"[worker] Event {event_id} retry {attempt}/{max_retries}")
+                    producer = KafkaProducer(
+                        bootstrap_servers=config.get("brokers", "localhost:9092")
+                    )
 
-                db.execute(
-                    text("UPDATE webhook_events SET last_error = :error WHERE id = :id"),
-                    {"error": str(e), "id": event_id},
-                )
+                    producer.send(
+                        config["topic"],
+                        json.dumps(row["payload"]).encode()
+                    )
 
-                schedule_retry(db, event_id, attempt)
+                    producer.flush()
 
-                redis_client.lpush(QUEUE_RETRY, str(event_id))
+                elif ttype == "sqs":
 
-                events_retried.inc()
-                publish_update(event_id, "retrying", attempt)
+                    import boto3
 
-            else:
-                print(f"[worker] Event {event_id} → DLQ")
+                    sqs = boto3.client("sqs")
 
-                db.execute(
-                    text("""
-                        UPDATE webhook_events
-                        SET status = 'failed', last_error = :error
-                        WHERE id = :id
-                    """),
-                    {"error": str(e), "id": event_id},
-                )
+                    sqs.send_message(
+                        QueueUrl=config["queue_url"],
+                        MessageBody=json.dumps(row["payload"])
+                    )
 
-                db.commit()
+                elif ttype == "rabbitmq":
 
-                redis_client.lpush(QUEUE_DLQ, str(event_id))
+                    import pika
 
-                events_failed.inc()
-                publish_update(event_id, "failed", attempt)
+                    connection = pika.BlockingConnection(
+                        pika.ConnectionParameters(host=config.get("host", "rabbitmq"))
+                    )
+
+                    channel = connection.channel()
+
+                    channel.basic_publish(
+                        exchange=config["exchange"],
+                        routing_key=config.get("routing_key", ""),
+                        body=json.dumps(row["payload"])
+                    )
+
+                    connection.close()
+
+                elif ttype == "grpc":
+
+                    import grpc
+
+                    channel = grpc.insecure_channel(config["endpoint"])
+
+                    print("grpc delivery placeholder")
+
+            except Exception as e:
+                delivery_failed = True
+                print(f"[worker] delivery failed ({ttype}): {e}")
+
+        # mark event delivered after all targets
+            
+        if delivery_failed:
+    db.execute(
+        text("""
+            UPDATE webhook_events
+            SET status = 'failed', last_error = 'multi-target failure'
+            WHERE id = :id
+        """),
+        {"id": event_id},
+    )
+    events_failed.inc()
+else:
+    db.execute(
+        text("UPDATE webhook_events SET status = 'delivered' WHERE id = :id"),
+        {"id": event_id},
+    )
+    events_delivered.inc()
+        db.commit()
+
+        events_delivered.inc()
+        publish_update(event_id, "delivered", row.get("attempt_count", 0))
 
     finally:
         db.close()
-
 
 def schedule_retry(db, event_id: int, attempt: int):
     next_retry_at = next_retry_time(attempt)

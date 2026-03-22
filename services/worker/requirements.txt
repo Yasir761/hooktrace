@@ -3,4 +3,7 @@ psycopg2-binary
 redis
 requests
 prometheus-client
-
+kafka-python
+boto3
+pika
+grpcio
