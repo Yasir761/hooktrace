@@ -17,11 +17,29 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "HookTrace ",
+  title: "Hooktrace – Webhook Debugging & Retry Platform",
   description:
     "Capture, inspect, and replay webhook events. Debug integrations in minutes, not hours.",
+
   icons: {
     icon: "/favicon.ico",
+  },
+
+  openGraph: {
+    title: "Hooktrace – Webhook Debugging & Retry Platform",
+    description:
+      "Relay, debug and monitor webhooks with retries and AI debugging.",
+    url: "https://hooktrace.xyz",
+    siteName: "Hooktrace",
+    type: "website",
+  },
+
+  twitter: {
+    card: "summary_large_image",
+    title: "Hooktrace – Webhook Debugging & Retry Platform",
+    description:
+      "Webhook relay with retries, observability and AI debugging.",
+    images: ["https://hooktrace.xyz/og-image.png"],
   },
 };
 
