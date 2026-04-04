@@ -471,7 +471,7 @@ function CreateTunnelModal({
 
   const handleCreate = async () => {
     setIsCreating(true)
-
+  
     // In production, call backend to create tunnel
     setTimeout(() => {
       const newTunnel: Tunnel = {
@@ -484,7 +484,7 @@ function CreateTunnelModal({
         requestCount: 0,
         lastRequest: null,
       }
-
+  
       onCreate(newTunnel)
       setIsCreating(false)
     }, 1000)

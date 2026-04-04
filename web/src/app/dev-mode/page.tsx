@@ -13,23 +13,22 @@ type Tunnel = {
   lastRequest: string | null
 }
 
+async function getTunnels(): Promise<Tunnel[]> {
+  const res = await fetch(`${process.env.API_URL}/tunnels`, {
+    credentials: "include",
+    cache: "no-store",
+  })
+
+  if (!res.ok) return []
+
+  return res.json()
+}
+
 export default async function DevModePage() {
   const user = await getCurrentUser()
   if (!user) redirect("/login")
 
-  // In production, fetch active tunnels from database
-  const activeTunnels: Tunnel[] = [
-    {
-      id: "tunnel-1",
-      name: "My Local Server",
-      localUrl: "http://localhost:3000",
-      publicUrl: "https://hook-abc123.hooktrace.dev",
-      status: "active",
-      createdAt: "2026-03-28T10:00:00.000Z",
-      requestCount: 47,
-      lastRequest: "2026-03-28T10:28:00.000Z",
-    },
-  ]
+  const tunnels = await getTunnels()
 
-  return <DevModeClient user={user} activeTunnels={activeTunnels} />
+  return <DevModeClient user={user} activeTunnels={tunnels} />
 }
