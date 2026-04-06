@@ -1,12 +1,12 @@
 FROM python:3.11-slim
 
-WORKDIR /worker
+WORKDIR /app
 
-COPY requirements.txt .
+COPY services/worker/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY *.py ./
+COPY . .
 
 ENV PYTHONUNBUFFERED=1
 
-CMD ["python", "-u", "worker.py"]
+CMD ["python", "-m", "services.worker.worker"]

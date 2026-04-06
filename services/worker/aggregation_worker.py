@@ -249,8 +249,8 @@ import hashlib
 from typing import Dict, Any, Set
 from sqlalchemy import text
 
-from database import SessionLocal
-from redis_client import redis_client
+from .database import SessionLocal
+from ..api.redis_client import redis_client
 
 AGG_QUEUE = "webhook:aggregate"
 DELIVERY_QUEUE = "webhook:queue"

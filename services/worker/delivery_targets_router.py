@@ -1,14 +1,13 @@
-# services/workers/delivery_targets_router.py
 """
 Routes incoming webhooks to configured delivery targets
-Integrates with your existing delivery workers
+Integrates with your existing delivery worker
 """
 
 from typing import List, Dict, Any
 from datetime import datetime
 from sqlalchemy import text
 
-from database import SessionLocal
+from .database import SessionLocal
 
 
 class DeliveryTargetsRouter:
@@ -17,44 +16,44 @@ class DeliveryTargetsRouter:
     """
     
     def __init__(self):
-        self.workers = {}
-        self._load_workers()
+        self.worker = {}
+        self._load_worker()
     
-    def _load_workers(self):
-        """Lazy load delivery workers"""
+    def _load_worker(self):
+        """Lazy load delivery worker"""
         try:
-            from services.workers.delivery.http import deliver_http
-            self.workers['http'] = deliver_http
+            from services.worker.delivery.http import deliver_http
+            self.worker['http'] = deliver_http
         except ImportError:
             pass
         
         try:
-            from services.workers.delivery.sqs import deliver_sqs
-            self.workers['sqs'] = deliver_sqs
+            from services.worker.delivery.sqs import deliver_sqs
+            self.worker['sqs'] = deliver_sqs
         except ImportError:
             pass
         
         try:
-            from services.workers.delivery.kafka import deliver_kafka
-            self.workers['kafka'] = deliver_kafka
+            from services.worker.delivery.kafka import deliver_kafka
+            self.worker['kafka'] = deliver_kafka
         except ImportError:
             pass
         
         try:
-            from services.workers.delivery.rabbitmq import deliver_rabbitmq
-            self.workers['rabbitmq'] = deliver_rabbitmq
+            from services.worker.delivery.rabbitmq import deliver_rabbitmq
+            self.worker['rabbitmq'] = deliver_rabbitmq
         except ImportError:
             pass
         
         try:
-            from services.workers.delivery.redis import deliver_redis
-            self.workers['redis'] = deliver_redis
+            from services.worker.delivery.redis import deliver_redis
+            self.worker['redis'] = deliver_redis
         except ImportError:
             pass
         
         try:
-            from services.workers.delivery.grpc import deliver_grpc
-            self.workers['grpc'] = deliver_grpc
+            from services.worker.delivery.grpc import deliver_grpc
+            self.worker['grpc'] = deliver_grpc
         except ImportError:
             pass
     
@@ -131,7 +130,7 @@ class DeliveryTargetsRouter:
             
             try:
                 # Get the appropriate worker
-                worker = self.workers.get(target_type)
+                worker = self.worker.get(target_type)
                 
                 if not worker:
                     results['failed'] += 1
@@ -204,6 +203,8 @@ delivery_router = DeliveryTargetsRouter()
 
 
 # Helper function for easy integration
+
+
 def route_webhook_to_targets(
     user_id: str,
     webhook_data: Dict[str, Any],
@@ -213,7 +214,7 @@ def route_webhook_to_targets(
     Convenience function to route webhook to delivery targets
     
     Usage:
-        from services.workers.delivery_targets_router import route_webhook_to_targets
+        from services.worker.delivery_targets_router import route_webhook_to_targets
         
         result = route_webhook_to_targets(
             user_id="user-123",

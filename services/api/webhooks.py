@@ -4,18 +4,34 @@ Webhook Receiver & Router
 Connects frontend integrations to backend provider handlers
 """
 
-from datetime import datetime
-from typing import Dict, Any, Optional
-import uuid
-import hmac
-import hashlib
+# from datetime import datetime
+# from typing import Dict, Any, Optional
+# import uuid
+# import hmac
+# import hashlib
+
+# from fastapi import APIRouter, Request, Header, HTTPException, Depends
+# from sqlalchemy import text
+
+# from database import SessionLocal
+# from auth import get_current_user
+# from services.tunnels.tunnel_manager import forward_to_tunnels
+# from delivery_targets_router import route_webhook_to_targets
+
+
+
+
 
 from fastapi import APIRouter, Request, Header, HTTPException, Depends
 from sqlalchemy import text
+from typing import Optional
+import uuid
 
-from database import SessionLocal
-from auth import get_current_user
-from services.tunnels.tunnel_manager import forward_to_tunnels
+from .database import SessionLocal
+from .auth import get_current_user
+
+from ..tunnels.tunnel_manager import forward_to_tunnels
+from ..worker.delivery_targets_router import route_webhook_to_targets
 
 router = APIRouter(prefix="/webhook", tags=["webhooks"])
 

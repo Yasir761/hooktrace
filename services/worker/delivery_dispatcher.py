@@ -1,7 +1,7 @@
 import requests
 import json
 from redis_client import redis_client
-from services.workers.delivery_targets_router import route_webhook_to_targets
+from .delivery_targets_router import route_webhook_to_targets
 
 
 def deliver_http(config, payload, headers):

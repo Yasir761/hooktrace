@@ -13,8 +13,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import text
 
-from database import SessionLocal
-from auth import get_current_user
+from .database import SessionLocal
+from .auth import get_current_user
 
 
 router = APIRouter(prefix="/tunnels", tags=["tunnels"])

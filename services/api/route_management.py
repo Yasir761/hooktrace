@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
-from database import SessionLocal
-from auth import get_current_user
+from .database import SessionLocal
+from .auth import get_current_user
 import secrets
 
 router = APIRouter(prefix="/routes", tags=["routes"])

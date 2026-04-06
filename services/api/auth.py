@@ -14,7 +14,7 @@ from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr
 from sqlalchemy import text
 
-from database import SessionLocal
+from.database import SessionLocal
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])

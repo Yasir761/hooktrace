@@ -1,11 +1,11 @@
-from providers import stripe
-from providers import github
-from providers import razorpay
-from providers import shopify
-from providers import slack
-from providers import discord
-from providers import notion
-from providers import supabase
+from . import stripe
+from . import github
+from . import razorpay
+from . import shopify
+from . import slack
+from . import discord
+from . import notion
+from . import supabase
 
 PROVIDERS = {
     "stripe": stripe,

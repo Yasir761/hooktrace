@@ -5,7 +5,7 @@ from sqlalchemy.sql import func
 from sqlalchemy.types import JSON
 import uuid
 
-from database import Base
+from .database import Base
 
 
 class User(Base):

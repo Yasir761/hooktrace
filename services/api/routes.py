@@ -5,17 +5,17 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import text
-from rate_limit import check_rate_limit
+from .rate_limit import check_rate_limit
 
-from database import SessionLocal
-from models import WebhookEvent
-from redis_client import redis_client
+from .database import SessionLocal
+from .models import WebhookEvent
+from .redis_client import redis_client
 
-from security import verify_signature
+from .security import verify_signature
 
-from providers.registry import PROVIDERS
+from .providers.registry import PROVIDERS
 
-from metrics import (
+from.metrics import (
     webhooks_received,
     webhooks_deduplicated,
     webhooks_invalid_signature,

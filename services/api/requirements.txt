@@ -17,3 +17,4 @@ supabase
 pynacl
 kafka-python
 
+

@@ -194,8 +194,8 @@ services:
 
   api:
     build:
-      context: services/api
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/api/Dockerfile
     container_name: hooktrace-api
     environment:
       DATABASE_URL: postgresql://hooktrace:hooktrace_dev@postgres:5432/hooktrace
@@ -219,8 +219,8 @@ services:
 
   worker:
     build:
-      context: services/worker
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/worker/Dockerfile
     container_name: hooktrace-worker
     environment:
       DATABASE_URL: postgresql://hooktrace:hooktrace_dev@postgres:5432/hooktrace
@@ -239,10 +239,10 @@ services:
   
   aggregation-worker:
     build:
-      context: services/worker
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/worker/Dockerfile
     container_name: hooktrace-aggregation-worker
-    command: python aggregation_worker.py
+    command: python -m services.worker.aggregation_worker
     environment:
       DATABASE_URL: postgresql://hooktrace:hooktrace_dev@postgres:5432/hooktrace
       REDIS_URL: redis://redis:6379

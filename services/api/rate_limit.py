@@ -1,5 +1,5 @@
 import time
-from redis_client import redis_client
+from .redis_client import redis_client
 
 LIMIT = 100  # requests
 WINDOW = 60  # seconds

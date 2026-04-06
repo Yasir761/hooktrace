@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Query, HTTPException, Depends
 from sqlalchemy import text
-from database import SessionLocal
-from auth import get_current_user
+from .database import SessionLocal
+from .auth import get_current_user
 
 router = APIRouter(prefix="/events", tags=["events"])
 

@@ -1,4 +1,3 @@
-# services/tunnels/tunnel_manager.py
 """
 Dev Mode Tunnel Manager
 Forwards webhooks to local development servers
@@ -11,7 +10,7 @@ import asyncio
 import httpx
 from sqlalchemy import text
 
-from database import SessionLocal
+from ..api.database import SessionLocal
 
 
 # -----------------------------
