@@ -67,3 +67,9 @@ temp/
 # IDE configurations
 .vscode/settings.json
 .idea/workspace.xml
+
+
+
+
+__pycache__/
+*.pyc
