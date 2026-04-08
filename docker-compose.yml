@@ -161,6 +161,106 @@
 
 
 
+# services:
+#   postgres:
+#     image: postgres:16-alpine
+#     container_name: hooktrace-db
+#     environment:
+#       POSTGRES_USER: hooktrace
+#       POSTGRES_PASSWORD: hooktrace_dev
+#       POSTGRES_DB: hooktrace
+#     ports:
+#       - "5433:5432"
+#     volumes:
+#       - postgres_data:/var/lib/postgresql/data
+    
+#     healthcheck:
+#       test: ["CMD-SHELL", "pg_isready -U hooktrace"]
+#       interval: 10s
+#       timeout: 5s
+#       retries: 5
+
+#   redis:
+#     image: redis:7-alpine
+#     container_name: hooktrace-redis
+#     ports:
+#       - "6379:6379"
+#     volumes:
+#       - redis_data:/data
+#     healthcheck:
+#       test: ["CMD", "redis-cli", "ping"]
+#       interval: 10s
+#       timeout: 5s
+#       retries: 5
+
+# api:
+#   build:
+#     context: .
+#     dockerfile: services/api/Dockerfile
+#   volumes:
+#     - ./services:/app/services
+#   container_name: hooktrace-api
+#   environment:
+#     DATABASE_URL: postgresql://hooktrace:hooktrace_dev@postgres:5432/hooktrace
+#     REDIS_URL: redis://redis:6379
+#   ports:
+#     - "3001:3001"
+
+
+# worker:
+#   build:
+#     context: .
+#     dockerfile: services/worker/Dockerfile
+#   volumes:
+#     - ./services:/app/services
+#   container_name: hooktrace-worker
+
+  
+# aggregation-worker:
+#   build:
+#     context: .
+#     dockerfile: services/worker/Dockerfile
+#   container_name: hooktrace-aggregation-worker
+#   command: python -m services.worker.aggregation_worker
+
+#   prometheus:
+#     image: prom/prometheus
+#     container_name: hooktrace-prometheus
+#     ports:
+#       - "9090:9090"
+#     volumes:
+#       - ./infra/prometheus.yml:/etc/prometheus/prometheus.yml
+#     depends_on:
+#       - api
+#       - worker
+
+#   grafana:
+#     image: grafana/grafana
+#     container_name: hooktrace-grafana
+#     ports:
+#       - "3005:3000"
+#     environment:
+#       - GF_SECURITY_ALLOW_EMBEDDING=true
+#       - GF_AUTH_ANONYMOUS_ENABLED=true
+#       - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+
+#     volumes:
+#       - grafana_data:/var/lib/grafana
+#       - ./infra/grafana/provisioning:/etc/grafana/provisioning
+#       - ./infra/grafana/dashboards:/var/lib/grafana/dashboards
+#     depends_on:
+#       - prometheus
+
+# volumes:
+#   postgres_data:
+#   redis_data:
+#   grafana_data:
+
+
+
+
+
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -196,9 +296,9 @@ services:
     build:
       context: .
       dockerfile: services/api/Dockerfile
-    volumes:
-    - ./services:/app/services  
     container_name: hooktrace-api
+    volumes:
+      - ./services:/app/services
     environment:
       DATABASE_URL: postgresql://hooktrace:hooktrace_dev@postgres:5432/hooktrace
       REDIS_URL: redis://redis:6379
@@ -210,11 +310,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "python - << 'EOF'\nimport urllib.request; urllib.request.urlopen('http://localhost:3001/health/'); print('ok')\nEOF"
-        ]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:3001/health')"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -223,9 +319,9 @@ services:
     build:
       context: .
       dockerfile: services/worker/Dockerfile
-    volumes:
-    - ./services:/app/services
     container_name: hooktrace-worker
+    volumes:
+      - ./services:/app/services
     environment:
       DATABASE_URL: postgresql://hooktrace:hooktrace_dev@postgres:5432/hooktrace
       REDIS_URL: redis://redis:6379
@@ -240,13 +336,14 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  
   aggregation-worker:
     build:
       context: .
       dockerfile: services/worker/Dockerfile
     container_name: hooktrace-aggregation-worker
     command: python -m services.worker.aggregation_worker
+    volumes:
+      - ./services:/app/services
     environment:
       DATABASE_URL: postgresql://hooktrace:hooktrace_dev@postgres:5432/hooktrace
       REDIS_URL: redis://redis:6379
@@ -254,6 +351,8 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      api:
         condition: service_healthy
     restart: unless-stopped
 
@@ -277,7 +376,6 @@ services:
       - GF_SECURITY_ALLOW_EMBEDDING=true
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
-
     volumes:
       - grafana_data:/var/lib/grafana
       - ./infra/grafana/provisioning:/etc/grafana/provisioning
@@ -289,4 +387,3 @@ volumes:
   postgres_data:
   redis_data:
   grafana_data:
-
