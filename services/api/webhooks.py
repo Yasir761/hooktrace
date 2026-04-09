@@ -298,7 +298,7 @@ token = "wh_" + secrets.token_urlsafe(16)
 async def receive_webhook(
     request: Request,
     token: str,
-    x_stripe_signature: Optional[str] = Header(None),
+   x_stripe_signature: Optional[str] = Header(None),
     x_hub_signature_256: Optional[str] = Header(None),
     x_shopify_hmac_sha256: Optional[str] = Header(None),
 ):
@@ -365,7 +365,6 @@ async def receive_webhook(
                 "route_id": route_id,
                 "provider": provider,
                 "event_type": event_type,
-                "token":token,
                 "payload": json.dumps(payload),
                 "headers": json.dumps(headers),
             }
@@ -478,44 +477,8 @@ async def receive_webhook(
 # Provider Handler Loader
 # -----------------------------
 def get_provider_handler(provider: str):
-
     try:
-
-        if provider == "stripe":
-            from services.providers.stripe import handle_stripe_webhook
-            return handle_stripe_webhook
-
-        elif provider == "github":
-            from services.providers.github import handle_github_webhook
-            return handle_github_webhook
-
-        elif provider == "shopify":
-            from services.providers.shopify import handle_shopify_webhook
-            return handle_shopify_webhook
-
-        elif provider == "slack":
-            from services.providers.slack import handle_slack_webhook
-            return handle_slack_webhook
-
-        elif provider == "discord":
-            from services.providers.discord import handle_discord_webhook
-            return handle_discord_webhook
-
-        elif provider == "notion":
-            from services.providers.notion import handle_notion_webhook
-            return handle_notion_webhook
-
-        elif provider == "razorpay":
-            from services.providers.razorpay import handle_razorpay_webhook
-            return handle_razorpay_webhook
-
-        elif provider == "supabase":
-            from services.providers.supabase import handle_supabase_webhook
-            return handle_supabase_webhook
-
-        else:
-            return None
-
-    except ImportError:
+        module = __import__(f"services.api.providers.{provider}", fromlist=[f"handle_{provider}_webhook"])
+        return getattr(module, f"handle_{provider}_webhook")
+    except Exception:
         return None
-

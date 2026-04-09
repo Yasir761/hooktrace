@@ -25,3 +25,20 @@ def verify(request: Request, public_key: str) -> bool:
 
 def extract_event_type(payload: dict) -> str:
     return payload.get("type", "unknown")
+
+
+
+
+
+async def handle_discord_webhook(payload: dict, headers: dict):
+    """
+    Discord webhook handler
+    """
+    event_type = payload.get("t")  # Discord gateway event type
+
+    print(f"[discord] event received: {event_type}")
+
+    return {
+        "provider": "discord",
+        "event_type": event_type
+    }

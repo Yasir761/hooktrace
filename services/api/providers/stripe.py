@@ -31,3 +31,23 @@ def extract_event_type(payload: dict) -> str:
     Stripe event type, e.g. payment_intent.succeeded
     """
     return payload.get("type", "unknown")
+
+
+
+
+async def handle_stripe_webhook(payload: dict, headers: dict):
+    """
+    Stripe webhook handler
+    """
+    event_type = payload.get("type")
+
+    print(f"[stripe] received event: {event_type}")
+
+    # Example processing logic
+    if event_type == "payment_intent.succeeded":
+        print("Payment succeeded")
+
+    return {
+        "provider": "stripe",
+        "event_type": event_type
+    }

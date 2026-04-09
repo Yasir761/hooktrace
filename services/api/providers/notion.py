@@ -15,3 +15,18 @@ def verify(request: Request, secret: str) -> bool:
 
 def extract_event_type(payload: dict) -> str:
     return payload.get("type", "unknown")
+
+
+
+async def handle_notion_webhook(payload: dict, headers: dict):
+    """
+    Notion webhook handler
+    """
+    event_type = payload.get("type")
+
+    print(f"[notion] event received: {event_type}")
+
+    return {
+        "provider": "notion",
+        "event_type": event_type
+    }

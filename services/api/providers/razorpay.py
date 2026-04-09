@@ -25,3 +25,15 @@ def verify(request: Request, secret: str) -> bool:
 
 def extract_event_type(payload: dict) -> str:
     return payload.get("event", "unknown")
+
+
+
+async def handle_razorpay_webhook(payload: dict, headers: dict):
+    event_type = payload.get("event")
+
+    print(f"[razorpay] event received: {event_type}")
+
+    return {
+        "provider": "razorpay",
+        "event_type": event_type
+    }

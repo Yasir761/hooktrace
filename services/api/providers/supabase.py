@@ -15,3 +15,15 @@ def verify(request: Request, secret: str) -> bool:
 
 def extract_event_type(payload: dict) -> str:
     return payload.get("type", "unknown")
+
+
+
+async def handle_supabase_webhook(payload: dict, headers: dict):
+    event_type = payload.get("type")
+
+    print(f"[supabase] event received: {event_type}")
+
+    return {
+        "provider": "supabase",
+        "event_type": event_type
+    }

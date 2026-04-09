@@ -34,3 +34,17 @@ def extract_event_type(payload: dict) -> str:
     """
     # Fallback to payload action if needed
     return payload.get("action", "unknown")
+
+
+
+
+
+async def handle_github_webhook(payload: dict, headers: dict):
+    event_type = headers.get("x-github-event")
+
+    print(f"[github] event received: {event_type}")
+
+    return {
+        "provider": "github",
+        "event_type": event_type
+    }

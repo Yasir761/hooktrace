@@ -15,3 +15,7 @@ def verify(request: Request, secret: str) -> bool:
 
 def extract_event_type(payload: dict) -> str:
     return payload.get("type", "unknown")
+
+
+
+
