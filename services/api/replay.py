@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import text
 from .database import SessionLocal
 from .redis_client import redis_client
+import json
 
 router = APIRouter(prefix="/events", tags=["replay"])
 QUEUE_MAIN = "webhook:queue"
@@ -15,8 +16,7 @@ def replay_event(event_id: int):
             text("""
                 SELECT
                     e.id,
-                    e.token,
-                    e.route,
+                    e.route_id,
                     r.mode,
                     r.dev_target,
                     r.prod_target
@@ -51,7 +51,7 @@ def replay_event(event_id: int):
                     attempt_count = 0,
                     last_error = NULL,
                     next_retry_at = NULL,
-                    delivery_target = :target
+                    
                 WHERE id = :id
             """),
             {

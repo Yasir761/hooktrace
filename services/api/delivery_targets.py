@@ -6,6 +6,7 @@ Delivery Targets API - Connects frontend UI to backend delivery workers
 from datetime import datetime
 from typing import List, Optional
 import uuid
+import json
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -154,13 +155,13 @@ def list_delivery_targets(user_id: str = Depends(get_current_user)):
                     "id": str(row[0]),
                     "name": row[1],
                     "type": row[2],
-                    "config": row[3],
+                    "config": row[3] if isinstance(row[3],dict) else json.loads(row[3]),
                     "enabled": row[4],
                     "createdAt": row[5].isoformat() if row[5] else None,
                     "lastUsed": row[6].isoformat() if row[6] else None,
                     "successCount": row[7],
                     "errorCount": row[8],
-                    "providers": row[9] if row[9] else [],
+                    "providers": row[9] if isinstance (row[9],list) else json.loads(row[9]),
                 }
                 for row in targets
             ]
@@ -190,8 +191,8 @@ def create_delivery_target(
                 "user_id": user_id,
                 "name": request.name,
                 "type": request.type,
-                "config": request.config.dict(exclude_none=True),
-                "providers": request.providers,
+                "config": json.dumps(request.config.dict(exclude_none=True)),
+                "providers": json.dumps(request.providers),
             }
         )
         db.commit()
@@ -282,7 +283,7 @@ def update_delivery_target(
 
         if request.config is not None:
             updates.append("config = :config")
-            params["config"] = request.config.dict(exclude_none=True)
+            params["config"] = json.dumps(request.config.dict(exclude_none=True))
 
         if request.enabled is not None:
             updates.append("enabled = :enabled")
@@ -290,7 +291,7 @@ def update_delivery_target(
 
         if request.providers is not None:
             updates.append("providers = :providers")
-            params["providers"] = request.providers
+            params["providers"] = json.dumps(request.providers)
 
         if updates:
             updates.append("updated_at = CURRENT_TIMESTAMP")
