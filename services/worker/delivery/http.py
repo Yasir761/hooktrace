@@ -2,7 +2,7 @@ import requests
 import time
 
 
-def deliver(config, payload, headers):
+def deliver_http(config, payload):
     url = config["url"]
 
     start = time.time()
@@ -10,7 +10,6 @@ def deliver(config, payload, headers):
     resp = requests.post(
         url,
         json=payload,
-        headers=headers,
         timeout=10,
     )
 

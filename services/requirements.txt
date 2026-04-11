@@ -14,10 +14,10 @@ email-validator
 alembic
 itsdangerous
 supabase
-secrets
 pynacl
 kafka-python
 requests
 boto3
 pika
 grpcio
+json

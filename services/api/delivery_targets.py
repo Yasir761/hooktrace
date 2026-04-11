@@ -383,27 +383,27 @@ def test_delivery_target(
         # Import and use your existing delivery workers
         try:
             if target_type == "http":
-                from services.workers.delivery.http import deliver_http
+                from services.worker.delivery.http import deliver_http
                 result = deliver_http(config, test_payload)
                 
             elif target_type == "sqs":
-                from services.workers.delivery.sqs import deliver_sqs
+                from services.worker.delivery.sqs import deliver_sqs
                 result = deliver_sqs(config, test_payload)
                 
             elif target_type == "kafka":
-                from services.workers.delivery.kafka import deliver_kafka
+                from services.worker.delivery.kafka import deliver_kafka
                 result = deliver_kafka(config, test_payload)
                 
             elif target_type == "rabbitmq":
-                from services.workers.delivery.rabbitmq import deliver_rabbitmq
+                from services.worker.delivery.rabbitmq import deliver_rabbitmq
                 result = deliver_rabbitmq(config, test_payload)
                 
             elif target_type == "redis":
-                from services.workers.delivery.redis import deliver_redis
+                from services.worker.delivery.redis import deliver_redis
                 result = deliver_redis(config, test_payload)
                 
             elif target_type == "grpc":
-                from services.workers.delivery.grpc import deliver_grpc
+                from services.worker.delivery.grpc import deliver_grpc
                 result = deliver_grpc(config, test_payload)
                 
             else:
