@@ -64,16 +64,27 @@ def get_current_user(access_token: str = Cookie(None)) -> str:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     try:
-        payload = jwt.decode(
-            access_token,
-            JWT_SECRET,
-            algorithms=[JWT_ALGO],
-        )
-        return payload["sub"]
+        payload = jwt.decode(access_token, JWT_SECRET, algorithms=[JWT_ALGO])
+        user_id = payload["sub"]
+
+        #  ONLY CHECK USER EXISTS (NO INSERT)
+        db = SessionLocal()
+        try:
+            user = db.execute(
+                text("SELECT id FROM users WHERE id = :id"),
+                {"id": user_id}
+            ).fetchone()
+
+            if not user:
+                raise HTTPException(status_code=401, detail="User not found")
+
+        finally:
+            db.close()
+
+        return user_id
+
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
-
-
 def set_auth_cookie(response, token: str):
     response.set_cookie(
         key="access_token",
