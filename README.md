@@ -2,7 +2,7 @@
 
 #  Hooktrace
 
-### The modern webhook infrastructure for developers
+### Programmable webhook engine with real-time visibility and intelligent processing
 
 **Simple. Reliable. Self-hosted.**
 
