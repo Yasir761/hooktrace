@@ -163,7 +163,7 @@ hooktrace/
 
 ```bash
 # Clone the repository
-git clone https://github.com/Yasir761/hooktrace.git
+git clone https://github.com/hooktracehq/hooktrace.git
 cd hooktrace
 
 # Copy environment file
@@ -241,14 +241,14 @@ For production deployments, see [DEPLOYMENT.md](./DEPLOYMENT.md).
 - [x] Idempotency key support
 - [x] HMAC signature validation
 - [x] Audit logs
-- [ ] WebSocket live updates *(in progress)*
-- [ ] Prometheus metrics *(planned)*
+- [x] WebSocket live updates
+- [x] Prometheus metrics
 
 ###  Phase 3: Developer Experience (Mostly Complete)
-- [x] Webhook provider templates (Stripe, GitHub, Razorpay, etc.)
+- [x] Webhook provider templates 
 - [x] Local dev forwarding (no ngrok needed)
-- [ ] Multiple delivery targets (HTTP, SQS, Kafka, Redis) *(HTTP only for now)*
-- [ ] Event aggregation mode *(planned)*
+- [x] Multiple delivery targets (HTTP, SQS, Kafka, Redis) 
+- [x] Event aggregation mode 
 
 ###  Phase 4: Advanced Features (Planned)
 - [ ] AI-powered failure analysis
