@@ -17,6 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://hooktrace.xyz"),
+
   title: "Hooktrace – Webhook Debugging & Retry Platform",
   description:
     "Capture, inspect, and replay webhook events. Debug integrations in minutes, not hours.",
@@ -31,6 +33,13 @@ export const metadata: Metadata = {
       "Relay, debug and monitor webhooks with retries and AI debugging.",
     url: "https://hooktrace.xyz",
     siteName: "Hooktrace",
+    images: [
+      {
+        url: "/opengraph-image", 
+        width: 1200,
+        height: 630,
+      },
+    ],
     type: "website",
   },
 
@@ -39,10 +48,9 @@ export const metadata: Metadata = {
     title: "Hooktrace – Webhook Debugging & Retry Platform",
     description:
       "Webhook relay with retries, observability and AI debugging.",
-    images: ["https://hooktrace.xyz/og-image.png"],
+    images: ["/opengraph-image"], 
   },
 };
-
 export default function RootLayout({
   children,
 }: {
