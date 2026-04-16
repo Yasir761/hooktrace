@@ -1,50 +1,39 @@
+
+
+
 "use client"
 
-import { useEffect, useState } from "react"
-
-const launchDate = new Date("2026-04-15T00:00:00Z")
-
-export function LaunchCountdown() {
-  const [timeLeft, setTimeLeft] = useState(() => launchDate.getTime() - Date.now())
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setTimeLeft(launchDate.getTime() - Date.now())
-    }, 1000)
-
-    return () => clearInterval(interval)
-  }, [])
-
-  const days = Math.max(Math.floor(timeLeft / (1000 * 60 * 60 * 24)), 0)
-  const hours = Math.max(Math.floor((timeLeft / (1000 * 60 * 60)) % 24), 0)
-  const minutes = Math.max(Math.floor((timeLeft / (1000 * 60)) % 60), 0)
-  const seconds = Math.max(Math.floor((timeLeft / 1000) % 60), 0)
-
+export function LaunchSection() {
   return (
-    <div className="mt-10 text-center">
-      <p className="text-xs uppercase tracking-widest text-muted-foreground">
-        Launching In
-      </p>
+    <div className="relative mt-10 w-full max-w-md">
 
-      <div className="mt-4 flex justify-center gap-6 text-2xl font-semibold">
-        <TimeBlock label="Days" value={days} />
-        <TimeBlock label="Hours" value={hours} />
-        <TimeBlock label="Min" value={minutes} />
-        <TimeBlock label="Sec" value={seconds} />
+      {/* Glow Background (same vibe as hero) */}
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_center,_hsl(var(--primary)/0.18),_transparent_70%)]" />
+
+      <div
+        className="
+          rounded-2xl
+          border border-border/60
+          bg-background/60
+          backdrop-blur-md
+          px-6 py-6
+          text-center
+          shadow-[0_0_40px_hsl(var(--primary)/0.08)]
+        "
+      >
+        <p className="text-xs uppercase tracking-widest text-muted-foreground">
+          Private Beta
+        </p>
+
+        <p className="mt-3 text-lg font-medium">
+          <span className="text-primary">HookTrace</span> is launching soon.
+        </p>
+
+        <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+          Join early access above and be among the first to debug webhooks
+          without the pain.
+        </p>
       </div>
-    </div>
-  )
-}
-
-function TimeBlock({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="flex flex-col items-center">
-      <span className="text-primary">
-        {value.toString().padStart(2, "0")}
-      </span>
-      <span className="text-xs text-muted-foreground">
-        {label}
-      </span>
     </div>
   )
 }

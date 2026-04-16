@@ -6,7 +6,7 @@
 import Image from "next/image"
 import { motion } from "framer-motion"
 import { event } from "@/lib/gtag"
-import { LaunchCountdown } from "@/components/landing/launch-countdown"
+import { LaunchSection } from "@/components/landing/launch-countdown"
 import { WaitlistForm } from "@/components/landing/waitlist-form"
 // import { Features } from "@/components/landing/features"
 import { useEffect, useRef } from "react"
@@ -156,7 +156,7 @@ export function Hero() {
           transition={{ delay: 0.55 }}
           className="mt-10"
         >
-          <LaunchCountdown />
+          <LaunchSection />
         </motion.div>
 
         {/* Trust Line */}
