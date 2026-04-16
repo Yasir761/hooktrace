@@ -171,6 +171,71 @@
 
 
 
+# name: CI Pipeline
+
+# on:
+#   push:
+#     branches: [main, develop]
+#   pull_request:
+#     branches: [main, develop]
+
+# jobs:
+#   infra-check:
+#     runs-on: ubuntu-latest
+
+#     services:
+#       postgres:
+#         image: postgres:16-alpine
+#         env:
+#           POSTGRES_USER: hooktrace
+#           POSTGRES_PASSWORD: hooktrace_test
+#           POSTGRES_DB: hooktrace_test
+#         options: >-
+#           --health-cmd pg_isready
+#           --health-interval 10s
+#           --health-timeout 5s
+#           --health-retries 5
+#         ports:
+#           - 5432:5432
+
+#       redis:
+#         image: redis:7-alpine
+#         options: >-
+#           --health-cmd "redis-cli ping"
+#           --health-interval 10s
+#           --health-timeout 5s
+#           --health-retries 5
+#         ports:
+#           - 6379:6379
+
+#     steps:
+#       - uses: actions/checkout@v4
+
+#       - name: Check Docker Compose config
+#         run: docker compose config
+
+#       #  Wait a bit for services to be fully ready
+#       - name: Wait for services
+#         run: sleep 5
+
+#       #  Postgres check via container (no apt install)
+#       - name: Verify Postgres is reachable
+#         run: |
+#           POSTGRES_CONTAINER=$(docker ps --filter "ancestor=postgres:16-alpine" --format "{{.ID}}" | head -n 1)
+#           docker exec $POSTGRES_CONTAINER psql -U hooktrace -d hooktrace_test -c "SELECT 1;"
+
+#       #  Redis check via container (no apt install)
+#       - name: Verify Redis is reachable
+#         run: |
+#           REDIS_CONTAINER=$(docker ps --filter "ancestor=redis:7-alpine" --format "{{.ID}}" | head -n 1)
+#           docker exec $REDIS_CONTAINER redis-cli ping
+
+
+
+
+
+
+
 name: CI Pipeline
 
 on:
@@ -208,24 +273,58 @@ jobs:
         ports:
           - 6379:6379
 
+    env:
+      DATABASE_URL: postgresql://hooktrace:hooktrace_test@localhost:5432/hooktrace_test
+      REDIS_URL: redis://localhost:6379
+
     steps:
       - uses: actions/checkout@v4
 
       - name: Check Docker Compose config
         run: docker compose config
 
-      #  Wait a bit for services to be fully ready
+      # Wait for services
       - name: Wait for services
         run: sleep 5
 
-      #  Postgres check via container (no apt install)
+      # Verify Postgres
       - name: Verify Postgres is reachable
         run: |
           POSTGRES_CONTAINER=$(docker ps --filter "ancestor=postgres:16-alpine" --format "{{.ID}}" | head -n 1)
           docker exec $POSTGRES_CONTAINER psql -U hooktrace -d hooktrace_test -c "SELECT 1;"
 
-      #  Redis check via container (no apt install)
+      # Verify Redis
       - name: Verify Redis is reachable
         run: |
           REDIS_CONTAINER=$(docker ps --filter "ancestor=redis:7-alpine" --format "{{.ID}}" | head -n 1)
           docker exec $REDIS_CONTAINER redis-cli ping
+
+      # -------------------------------
+      #   SYSTEM INTEGRATION TEST
+      # -------------------------------
+
+      # Start your API (from docker-compose)
+      - name: Start API
+        run: |
+          docker compose up -d api
+          sleep 10
+
+      # Send a test webhook
+      - name: Send test webhook
+        run: |
+          curl -X POST http://localhost:3000/webhook \
+            -H "Content-Type: application/json" \
+            -d '{"event":"ci_test","data":{"source":"github-actions"}}'
+
+      # Wait for processing (important if async)
+      - name: Wait for processing
+        run: sleep 5
+
+      # Verify webhook stored in DB
+      - name: Verify webhook stored in DB
+        run: |
+          POSTGRES_CONTAINER=$(docker ps --filter "ancestor=postgres:16-alpine" --format "{{.ID}}" | head -n 1)
+          
+          docker exec $POSTGRES_CONTAINER psql -U hooktrace -d hooktrace_test -c "
+          SELECT * FROM events ORDER BY created_at DESC LIMIT 1;
+          "
