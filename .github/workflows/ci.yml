@@ -296,7 +296,7 @@ jobs:
       #  SYSTEM INTEGRATION TEST
       # -------------------------------
 
-      # Start ONLY API with correct env (THIS IS THE FIX)
+      # Start ONLY API with correct env
       - name: Start API
         run: |
           docker compose up -d api --no-deps
@@ -305,16 +305,17 @@ jobs:
           DATABASE_URL: postgresql://hooktrace:hooktrace_test@host.docker.internal:5432/hooktrace_test
           REDIS_URL: redis://host.docker.internal:6379
 
-      # Debug logs (very useful)
+      # Debug logs
       - name: Debug API logs
         run: |
           docker ps -a
           docker logs hooktrace-api || true
 
-      # Send a test webhook
+      #  FIXED: Send webhook from inside container
       - name: Send test webhook
         run: |
-          curl -X POST http://localhost:3001/webhook \
+          API_CONTAINER=$(docker ps --filter "name=hooktrace-api" --format "{{.ID}}" | head -n 1)
+          docker exec $API_CONTAINER curl -X POST http://localhost:3001/webhook \
             -H "Content-Type: application/json" \
             -d '{"event":"ci_test","data":{"source":"github-actions"}}'
 
