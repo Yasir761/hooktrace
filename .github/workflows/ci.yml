@@ -315,8 +315,16 @@ jobs:
           RESP=$(curl -s -X POST http://localhost:3001/auth/login \
             -H "Content-Type: application/json" \
             -d '{"email":"ci@hooktrace.test","password":"ci_test_pass"}')
+
           echo "Login response: $RESP"
+
           TOKEN=$(echo $RESP | python3 -c "import sys,json; print(json.load(sys.stdin).get('access_token',''))")
+
+          if [ -z "$TOKEN" ]; then
+            echo " Login failed"
+            exit 1
+          fi
+
           echo "TOKEN=$TOKEN" >> $GITHUB_ENV
 
       - name: Create a route
@@ -325,22 +333,34 @@ jobs:
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $TOKEN" \
             -d '{"name":"ci-test-route"}')
+
           echo "Create route response: $RESP"
+
           ROUTE_TOKEN=$(echo $RESP | python3 -c "import sys,json; print(json.load(sys.stdin).get('token',''))")
           ROUTE_PATH=$(echo $RESP | python3 -c "import sys,json; print(json.load(sys.stdin).get('route','ci'))")
+
+          if [ -z "$ROUTE_TOKEN" ]; then
+            echo " Failed to create route"
+            exit 1
+          fi
+
           echo "ROUTE_TOKEN=$ROUTE_TOKEN" >> $GITHUB_ENV
           echo "ROUTE_PATH=$ROUTE_PATH" >> $GITHUB_ENV
 
       - name: Send test webhook
         run: |
+          echo "Using route: /r/$ROUTE_TOKEN/$ROUTE_PATH"
+
           RESPONSE=$(curl -s -o /tmp/webhook_response.txt -w "%{http_code}" \
             -X POST http://localhost:3001/r/$ROUTE_TOKEN/$ROUTE_PATH \
             -H "Content-Type: application/json" \
             -d '{"event":"ci_test","data":{"source":"github-actions"}}')
+
           echo "Response code: $RESPONSE"
           echo "Response body: $(cat /tmp/webhook_response.txt)"
+
           if [ "$RESPONSE" -ge 400 ]; then
-            echo "Webhook failed with status $RESPONSE"
+            echo " Webhook failed with status $RESPONSE"
             exit 1
           fi
 
