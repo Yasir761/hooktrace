@@ -127,7 +127,7 @@ def register(data: RegisterSchema):
 
         token = create_token(user_id)
 
-        response = JSONResponse({"success": True})
+        response = JSONResponse({"success": True, "access_token": token})
         set_auth_cookie(response, token)
 
         return response
@@ -166,7 +166,7 @@ def login(data: LoginSchema):
 
         token = create_token(user_id)
 
-        response = JSONResponse({"success": True})
+        response = JSONResponse({"success": True, "access_token": token})
         set_auth_cookie(response, token)
 
         return response
