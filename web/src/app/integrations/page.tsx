@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic"
 import { getCurrentUser } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import IntegrationsClient from "@/app/integrations/integrations-client"

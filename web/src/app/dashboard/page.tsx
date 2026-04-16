@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic"
 import { redirect } from "next/navigation"
 import { promQuery, getScalar } from "@/lib/prometheus"
 import { getCurrentUser } from "@/lib/auth"

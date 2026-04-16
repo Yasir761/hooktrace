@@ -1,4 +1,4 @@
-
+export const dynamic = "force-dynamic"
 import { notFound } from "next/navigation"
 import { formatDistanceToNow } from "date-fns"
 import Link from "next/link"
