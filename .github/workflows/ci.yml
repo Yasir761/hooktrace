@@ -231,6 +231,12 @@
 #           docker exec $REDIS_CONTAINER redis-cli ping
 
 
+
+
+
+
+
+
 name: CI Pipeline
 
 on:
@@ -327,6 +333,20 @@ jobs:
 
           echo "TOKEN=$TOKEN" >> $GITHUB_ENV
 
+      #  NEW STEP: CREATE TUNNEL
+      - name: Create a dev tunnel
+        run: |
+          RESP=$(curl -s -X POST http://localhost:3001/tunnels \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $TOKEN")
+
+          echo "Create tunnel response: $RESP"
+
+          echo "$RESP" | python3 -m json.tool || {
+            echo " Tunnel creation failed"
+            exit 1
+          }
+
       - name: Create a route
         run: |
           RESP=$(curl -s -X POST http://localhost:3001/routes/ \
@@ -335,6 +355,11 @@ jobs:
             -d '{"route":"ci-test-route"}')
 
           echo "Create route response: $RESP"
+
+          echo "$RESP" | python3 -m json.tool || {
+            echo " Invalid JSON response"
+            exit 1
+          }
 
           ROUTE_TOKEN=$(echo $RESP | python3 -c "import sys,json; print(json.load(sys.stdin).get('token',''))")
           ROUTE_PATH=$(echo $RESP | python3 -c "import sys,json; print(json.load(sys.stdin).get('route','ci'))")
