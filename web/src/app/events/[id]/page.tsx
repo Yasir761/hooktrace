@@ -3,7 +3,7 @@ import { notFound } from "next/navigation"
 import { formatDistanceToNow } from "date-fns"
 import Link from "next/link"
 
-import { apiFetch } from "@/lib/api"
+import { serverApiFetch } from "@/lib/server-api"
 import { ReplayButton } from "@/components/ReplayButton"
 import { EventLiveView } from "@/components/EventLiveView"
 import { JsonViewer } from "@/components/events/json-viewer"
@@ -54,7 +54,7 @@ export default async function EventDetailPage({
   let event: Event | null = null
 
   try {
-    event = await apiFetch<Event>(`/events/${id}`)
+    event = await serverApiFetch<Event>(`/events/${id}`)
   } catch {
     notFound()
   }
