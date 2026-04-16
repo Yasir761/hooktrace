@@ -231,7 +231,6 @@
 #           docker exec $REDIS_CONTAINER redis-cli ping
 
 
-
 name: CI Pipeline
 
 on:
@@ -303,6 +302,9 @@ jobs:
       # -------------------------------
       # SYSTEM INTEGRATION TEST
       # -------------------------------
+
+      - name: Check API routes
+        run: curl -s http://localhost:3001/openapi.json | python3 -m json.tool | grep '"path"'
 
       - name: Send test webhook
         run: |
