@@ -231,7 +231,7 @@ def create_route(
         if not user:
             raise HTTPException(status_code=400, detail="User not found")
 
-        # ✅ FETCH ACTIVE TUNNEL (NEW)
+        #  FETCH ACTIVE TUNNEL (NEW)
         tunnel = db.execute(
             text("""
                 SELECT id FROM dev_tunnels
@@ -245,7 +245,7 @@ def create_route(
 
         tunnel_id = tunnel[0] if tunnel else None
 
-        # ⚠️ Optional safety check (recommended)
+        #  Optional safety check (recommended)
         if not tunnel_id:
             raise HTTPException(
                 status_code=400,

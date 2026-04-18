@@ -66,16 +66,20 @@ def get_current_user(
 
     token = None
 
-    # 1. Check Authorization header
+    # 1. Authorization header
     if authorization and authorization.startswith("Bearer "):
         token = authorization.split(" ")[1]
 
-    # 2. Fallback to cookie
+    # 2. Cookie fallback
     elif access_token:
-        token = access_token
+        token = access_token.strip().strip('"').strip()
 
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
+
+    #  VALIDATION
+    if token.count(".") != 2:
+        raise HTTPException(status_code=401, detail="Malformed token")
 
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGO])

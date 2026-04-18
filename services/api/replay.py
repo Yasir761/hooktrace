@@ -50,7 +50,7 @@ def replay_event(event_id: int):
                     status = 'pending',
                     attempt_count = 0,
                     last_error = NULL,
-                    next_retry_at = NULL,
+                    next_retry_at = NULL
                     
                 WHERE id = :id
             """),
