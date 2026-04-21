@@ -19,7 +19,7 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import Link from "next/link"
 
 
-import { headers } from "next/headers"
+
 
 export default async function EventsPage({
   searchParams,
@@ -224,15 +224,17 @@ export default async function EventsPage({
 
         {/* Content */}
       
-        {events.length === 0 ? (
-          
-          <EmptyState status={status} />
-        ) : (
-          <EventsLiveWrapper key={status ?? "all"} initialEvents={events} status={status} />
-          
-          
-          
-        )}
+        <div className="transition-opacity duration-200">
+  {events.length === 0 ? (
+    <EmptyState status={status} />
+  ) : (
+    <EventsLiveWrapper
+      key={status ?? "all"}
+      initialEvents={events}
+      status={status}
+    />
+  )}
+</div>
       </div>
     </div>
   )
