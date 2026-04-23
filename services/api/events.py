@@ -140,3 +140,28 @@ def get_dlq_count(
 
     finally:
         db.close()
+
+
+
+
+@router.get("/{id}/deliveries")
+def get_event_deliveries(id: int, user_id: str = Depends(get_current_user)):
+    db = SessionLocal()
+    try:
+        rows = db.execute(
+            text("""
+                SELECT dl.*, dt.name as target_name
+                FROM delivery_logs dl
+                JOIN delivery_targets dt ON dl.target_id = dt.id
+                JOIN webhook_events e ON dl.event_id = e.id
+                JOIN webhook_routes r ON e.route_id = r.id
+                WHERE dl.event_id = :id
+                AND r.user_id = :user_id
+                ORDER BY dl.created_at DESC
+            """),
+            {"id": id, "user_id": user_id}
+        ).fetchall()
+
+        return {"items": [dict(r._mapping) for r in rows]}
+    finally:
+        db.close()

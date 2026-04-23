@@ -18,7 +18,9 @@ export default function TargetLogs({ targetId }: { targetId: string }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/delivery-targets/${targetId}/logs`)
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/delivery-targets/${targetId}/logs`,{
+      credentials : 'include',
+    })
       .then(res => res.json())
       .then(data => setLogs(data.items || []))
       .finally(() => setLoading(false))

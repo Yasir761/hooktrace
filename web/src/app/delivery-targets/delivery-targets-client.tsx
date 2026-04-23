@@ -29,6 +29,9 @@ type User = {
   avatar_url?: string
 }
 
+
+
+
 /* ---------------- Component ---------------- */
 
 export default function DeliveryTargetsClient({
@@ -40,9 +43,46 @@ export default function DeliveryTargetsClient({
 }) {
   const [targets, setTargets] = useState(initialTargets)
   const [searchQuery, setSearchQuery] = useState("")
+const [loading, setLoading] = useState(false)
+
 
   /* ---------------- Actions ---------------- */
 
+
+  const handleCreate = async () => {
+    setLoading(true)
+  
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/delivery-targets`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: "New HTTP Target",
+            type: "http",
+            config: {
+              url: "http://host.docker.internal:3000/api/webhook-test",
+            },
+            providers: [],
+          }),
+        }
+      )
+  
+      const data = await res.json()
+  
+      //  update UI instantly
+      setTargets(prev => [data.target || data, ...prev])
+  
+    } catch (err) {
+      console.error("Create failed:", err)
+    } finally {
+      setLoading(false)
+    }
+  }
   const handleToggle = async (id: string) => {
     const target = targets.find(t => t.id === id)
     if (!target) return
@@ -240,10 +280,14 @@ export default function DeliveryTargetsClient({
         </div>
 
         {/* Create Button */}
-        <button className="fixed bottom-6 right-6 bg-primary text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          New Target
-        </button>
+        <button
+  onClick={handleCreate}
+  disabled={loading}
+  className="fixed bottom-6 right-6 bg-primary text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2"
+>
+  <Plus className="w-4 h-4" />
+  {loading ? "Creating..." : "New Target"}
+</button>
 
       </div>
     </div>

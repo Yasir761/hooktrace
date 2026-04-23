@@ -414,6 +414,26 @@ def test_delivery_target(target_id: str, user_id: str = Depends(get_current_user
         db.close()
 
 
+
+@router.get("/{id}/logs")
+def get_target_logs(id: str, user_id: str = Depends(get_current_user)):
+    db = SessionLocal()
+    try:
+        rows = db.execute(
+            text("""
+                SELECT *
+                FROM delivery_logs
+                WHERE target_id = :id
+                ORDER BY created_at DESC
+                LIMIT 50
+            """),
+            {"id": id}
+        ).fetchall()
+
+        return {"items": [dict(r._mapping) for r in rows]}
+    finally:
+        db.close()
+
 @router.get("/{target_id}/stats")
 def get_target_stats(target_id: str, user_id: str = Depends(get_current_user)):
     db = SessionLocal()
