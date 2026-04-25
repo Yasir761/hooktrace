@@ -1,5 +1,7 @@
 "use client"
 
+import { motion } from "framer-motion"
+
 type Log = {
   event_id?: number
   status: "success" | "failed"
@@ -16,7 +18,7 @@ function parseResponse(response?: string) {
   }
 }
 
-/* 🔥 NEW: FAILURE CLASSIFICATION */
+/* FAILURE CLASSIFICATION */
 function classifyFailure(log: Log) {
   if (log.status_code) {
     if (log.status_code >= 500) return "Server Error"
@@ -32,11 +34,15 @@ function classifyFailure(log: Log) {
 export default function InsightsPanel({ logs }: { logs: Log[] }) {
   if (!logs.length) {
     return (
-      <div className="rounded-2xl border bg-card p-6">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="rounded-2xl border bg-card p-6"
+      >
         <p className="text-sm text-muted-foreground">
           Not enough data to generate insights yet.
         </p>
-      </div>
+      </motion.div>
     )
   }
 
@@ -117,33 +123,55 @@ export default function InsightsPanel({ logs }: { logs: Log[] }) {
   /* ---------------- UI ---------------- */
 
   return (
-    <div className="rounded-2xl border bg-card p-6 space-y-4">
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-2xl border bg-card p-6 space-y-5"
+    >
 
       <h2 className="font-semibold">Insights</h2>
 
+      {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+
         <Stat label="Success Rate" value={`${successRate}%`} />
         <Stat label="Failures" value={failed} />
         <Stat label="Avg Latency" value={avgLatency ? `${avgLatency}ms` : "-"} />
         <Stat label="Retry Success" value={retryRate ? `${retryRate}%` : "-"} />
+
       </div>
 
+      {/* Failure summary */}
       {topFailure && (
-        <p className="text-xs text-muted-foreground">
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-xs text-muted-foreground"
+        >
           Top failure: {topFailure[0]} ({topFailure[1]} times)
-        </p>
+        </motion.p>
       )}
 
+      {/* Failure alert */}
       {failed > 0 && (
-        <p className="text-xs text-red-500">
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-xs text-red-500"
+        >
           {failed} failure(s) detected
-        </p>
+        </motion.p>
       )}
 
-      <div className="text-sm bg-muted p-3 rounded-md">
+      {/* Recommendation */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="text-sm bg-muted p-3 rounded-md"
+      >
         💡 {recommendation}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }
 
@@ -151,9 +179,12 @@ export default function InsightsPanel({ logs }: { logs: Log[] }) {
 
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (
-    <div>
+    <motion.div
+      whileHover={{ y: -2 }}
+      className="space-y-1"
+    >
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="font-semibold">{value}</p>
-    </div>
+    </motion.div>
   )
 }

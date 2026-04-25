@@ -6,6 +6,7 @@ import type {
   DeliveryTarget,
   DeliveryTargetPayload,
 } from "@/types/delivery-target"
+import { motion, AnimatePresence } from "framer-motion"
 
 type Props = {
   onCreated: (target: DeliveryTarget) => void
@@ -40,26 +41,55 @@ export default function CreateTargetModal({ onCreated }: Props) {
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="btn-primary">
+      <motion.button
+        whileTap={{ scale: 0.95 }}
+        onClick={() => setOpen(true)}
+        className="btn-primary"
+      >
         New Target
-      </button>
+      </motion.button>
     )
   }
-  
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-  
-      <div className="bg-card rounded-2xl p-6 w-full max-w-md shadow-xl">
-        
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="font-semibold">Create Target</h2>
-  
-          <button onClick={() => setOpen(false)}>✕</button>
-        </div>
-  
-        <TargetForm onSubmit={handleCreate} loading={loading} />
-  
-      </div>
-    </div>
+    <AnimatePresence>
+      <motion.div
+        key="overlay"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      >
+
+        <motion.div
+          key="modal"
+          initial={{ opacity: 0, scale: 0.95, y: 10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 10 }}
+          transition={{ duration: 0.2 }}
+          className="bg-card rounded-2xl p-6 w-full max-w-md shadow-xl"
+        >
+
+          {/* Header */}
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="font-semibold">Create Target</h2>
+
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setOpen(false)}
+              className="text-sm text-muted-foreground hover:text-foreground transition"
+            >
+              ✕
+            </motion.button>
+          </div>
+
+          {/* Form */}
+          <div className="space-y-4">
+            <TargetForm onSubmit={handleCreate} loading={loading} />
+          </div>
+
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
   )
 }
