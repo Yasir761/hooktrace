@@ -1,9 +1,8 @@
-
-
 // "use client"
-
 // import { useEffect, useState } from "react"
 // import { CheckCircle2, XCircle, Clock } from "lucide-react"
+// import { toast } from "sonner"
+
 
 // type Log = {
 //   id: string
@@ -17,23 +16,6 @@
 
 // /* ---------------- HELPERS ---------------- */
 
-
-// async function retryEvent(eventId: number) {
-//   try {
-//     await fetch(
-//       `${process.env.NEXT_PUBLIC_API_URL}/events/${eventId}/replay`,
-//       {
-//         method: "POST",
-//         credentials: "include",
-//       }
-//     )
-
-//     alert("Retry triggered")
-//   } catch {
-//     alert("Retry failed")
-//   }
-// }
-
 // function groupByEvent(logs: Log[]) {
 //   const map: Record<number, Log[]> = {}
 
@@ -43,7 +25,7 @@
 //   })
 
 //   return Object.entries(map)
-//     .sort((a, b) => Number(b[0]) - Number(a[0])) // latest first
+//     .sort((a, b) => Number(b[0]) - Number(a[0]))
 //     .map(([eventId, items]) => ({
 //       eventId: Number(eventId),
 //       items: items.sort((a, b) => b.attempt - a.attempt),
@@ -65,41 +47,63 @@
 // export default function TargetLogs({ targetId }: { targetId: string }) {
 //   const [logs, setLogs] = useState<Log[]>([])
 //   const [loading, setLoading] = useState(true)
+//   const [retrying, setRetrying] = useState<number | null>(null)
+//   const [error, setError] = useState<string | null>(null)
+
+//   /* ---------------- FETCH ---------------- */
+
+//   async function fetchLogs() {
+//     try {
+//       const res = await fetch(
+//         `${process.env.NEXT_PUBLIC_API_URL}/delivery-targets/${targetId}/logs`,
+//         { credentials: "include" }
+//       )
+
+//       const data = await res.json()
+
+//       setLogs((prev) => {
+//         const next = data.items || []
+//         if (JSON.stringify(prev) === JSON.stringify(next)) return prev
+//         return next
+//       })
+//     } catch (err) {
+//       console.error("Failed to fetch logs", err)
+//       setError("Failed to load logs ")
+//     } finally {
+//       setLoading(false)
+//     }
+//   }
+
+//   /* ---------------- RETRY ---------------- */
+
+//   async function retryEvent(eventId: number) {
+//     try {
+//       setRetrying(eventId)
+
+//       await fetch(
+//         `${process.env.NEXT_PUBLIC_API_URL}/events/${eventId}/replay`,
+//         {
+//           method: "POST",
+//           credentials: "include",
+//         }
+//       )
+
+//       // refresh logs instantly
+//       await fetchLogs()
+//     } catch {
+//       toast.error("Retry failed")
+//     } finally {
+//       setRetrying(null)
+//     }
+//   }
+
+//   /* ---------------- EFFECT ---------------- */
 
 //   useEffect(() => {
-//     async function fetchLogs() {
-//       try {
-//         const res = await fetch(
-//           `${process.env.NEXT_PUBLIC_API_URL}/delivery-targets/${targetId}/logs`,
-//           {
-//             credentials: "include",
-//           }
-//         )
-  
-//         const data = await res.json()
-  
-//         setLogs((prev) => {
-//           const next = data.items || []
-  
-//           if (JSON.stringify(prev) === JSON.stringify(next)) {
-//             return prev
-//           }
-  
-//           return next
-//         })
-//       } catch (err) {
-//         console.error("Failed to fetch logs", err)
-//       } finally {
-//         setLoading(false)
-//       }
-//     }
-  
-//     // initial fetch
 //     fetchLogs()
-  
-//     //  interval defined as const
-//     const interval = setInterval(fetchLogs, 5000)
-  
+
+//     const interval = setInterval(fetchLogs, 4000) // slightly faster
+
 //     return () => clearInterval(interval)
 //   }, [targetId])
 
@@ -140,7 +144,7 @@
 //               return (
 //                 <div key={log.id} className="flex gap-3">
 
-//                   {/* Timeline Dot */}
+//                   {/* Status Icon */}
 //                   <div className="mt-1">
 //                     {log.status === "success" ? (
 //                       <CheckCircle2 className="w-4 h-4 text-emerald-500" />
@@ -152,23 +156,29 @@
 //                   {/* Content */}
 //                   <div className="flex-1 space-y-1">
 
-//                     <p className="text-sm font-medium">
-//                       {log.status === "success"
-//                         ? "Delivered successfully"
-//                         : "Delivery failed"}
+//                     {/* Title + Retry */}
+//                     <div className="flex items-center gap-2">
 
-//                         {
-//                           log.status === "failed" && (
-//                             <button
-//                             onClick={() => retryEvent(log.event_id)}
-//     className="text-xs px-2 py-1 rounded border hover:bg-muted"
-//                             >
-//                               Retry
-//                             </button>
-//                           )
-//                         }
-//                     </p>
+//                       <p className="text-sm font-medium">
+//                         {log.status === "success"
+//                           ? "Delivered successfully"
+//                           : "Delivery failed"}
+//                       </p>
 
+//                       {log.status === "failed" && (
+//                         <button
+//                           onClick={() => retryEvent(log.event_id)}
+//                           disabled={retrying === log.event_id}
+//                           className="text-xs px-2 py-1 rounded border hover:bg-muted"
+//                         >
+//                           {retrying === log.event_id
+//                             ? "Retrying..."
+//                             : "Retry"}
+//                         </button>
+//                       )}
+//                     </div>
+
+//                     {/* Meta */}
 //                     <div className="flex gap-3 text-xs text-muted-foreground flex-wrap">
 
 //                       <span>Attempt {log.attempt}</span>
@@ -185,7 +195,7 @@
 //                       )}
 //                     </div>
 
-//                     {/* Response preview */}
+//                     {/* Response */}
 //                     {parsed && (
 //                       <details className="text-xs mt-1">
 //                         <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
@@ -219,12 +229,11 @@
 
 
 
-
-
 "use client"
 
 import { useEffect, useState } from "react"
 import { CheckCircle2, XCircle, Clock } from "lucide-react"
+import { toast } from "sonner"
 
 type Log = {
   id: string
@@ -235,8 +244,6 @@ type Log = {
   attempt: number
   created_at: string
 }
-
-/* ---------------- HELPERS ---------------- */
 
 function groupByEvent(logs: Log[]) {
   const map: Record<number, Log[]> = {}
@@ -255,23 +262,18 @@ function groupByEvent(logs: Log[]) {
 }
 
 function parseResponse(response?: string) {
-  if (!response) return null
-
   try {
-    return JSON.parse(response)
+    return response ? JSON.parse(response) : null
   } catch {
     return response
   }
 }
 
-/* ---------------- COMPONENT ---------------- */
-
 export default function TargetLogs({ targetId }: { targetId: string }) {
   const [logs, setLogs] = useState<Log[]>([])
   const [loading, setLoading] = useState(true)
   const [retrying, setRetrying] = useState<number | null>(null)
-
-  /* ---------------- FETCH ---------------- */
+  const [error, setError] = useState<string | null>(null)
 
   async function fetchLogs() {
     try {
@@ -284,17 +286,14 @@ export default function TargetLogs({ targetId }: { targetId: string }) {
 
       setLogs((prev) => {
         const next = data.items || []
-        if (JSON.stringify(prev) === JSON.stringify(next)) return prev
-        return next
+        return JSON.stringify(prev) === JSON.stringify(next) ? prev : next
       })
-    } catch (err) {
-      console.error("Failed to fetch logs", err)
+    } catch {
+      setError("Failed to load logs")
     } finally {
       setLoading(false)
     }
   }
-
-  /* ---------------- RETRY ---------------- */
 
   async function retryEvent(eventId: number) {
     try {
@@ -302,45 +301,38 @@ export default function TargetLogs({ targetId }: { targetId: string }) {
 
       await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/events/${eventId}/replay`,
-        {
-          method: "POST",
-          credentials: "include",
-        }
+        { method: "POST", credentials: "include" }
       )
 
-      // refresh logs instantly
+      toast.success("Retry triggered")
       await fetchLogs()
     } catch {
-      alert("Retry failed")
+      toast.error("Retry failed")
     } finally {
       setRetrying(null)
     }
   }
 
-  /* ---------------- EFFECT ---------------- */
-
   useEffect(() => {
     fetchLogs()
-
-    const interval = setInterval(fetchLogs, 4000) // slightly faster
-
+    const interval = setInterval(fetchLogs, 4000)
     return () => clearInterval(interval)
   }, [targetId])
 
   const grouped = groupByEvent(logs)
 
-  if (loading) {
-    return (
-      <div className="p-6 text-sm text-muted-foreground">
-        Loading logs...
-      </div>
-    )
-  }
+  if (loading) return <div className="p-6 text-sm">Loading logs...</div>
 
   return (
     <div className="rounded-2xl border bg-card p-5 space-y-6">
 
       <h2 className="font-semibold text-sm">Activity Timeline</h2>
+
+      {error && (
+        <div className="text-xs text-red-500 bg-red-50 p-2 rounded">
+          {error}
+        </div>
+      )}
 
       {grouped.length === 0 && (
         <p className="text-sm text-muted-foreground">
@@ -351,8 +343,7 @@ export default function TargetLogs({ targetId }: { targetId: string }) {
       {grouped.map((group) => (
         <div key={group.eventId} className="space-y-3">
 
-          {/* Event Header */}
-          <div className="text-xs font-medium text-muted-foreground">
+          <div className="text-xs text-muted-foreground">
             Event #{group.eventId}
           </div>
 
@@ -364,7 +355,6 @@ export default function TargetLogs({ targetId }: { targetId: string }) {
               return (
                 <div key={log.id} className="flex gap-3">
 
-                  {/* Status Icon */}
                   <div className="mt-1">
                     {log.status === "success" ? (
                       <CheckCircle2 className="w-4 h-4 text-emerald-500" />
@@ -373,39 +363,29 @@ export default function TargetLogs({ targetId }: { targetId: string }) {
                     )}
                   </div>
 
-                  {/* Content */}
                   <div className="flex-1 space-y-1">
 
-                    {/* Title + Retry */}
                     <div className="flex items-center gap-2">
-
                       <p className="text-sm font-medium">
                         {log.status === "success"
-                          ? "Delivered successfully"
-                          : "Delivery failed"}
+                          ? "Delivered"
+                          : "Failed"}
                       </p>
 
                       {log.status === "failed" && (
                         <button
                           onClick={() => retryEvent(log.event_id)}
                           disabled={retrying === log.event_id}
-                          className="text-xs px-2 py-1 rounded border hover:bg-muted"
+                          className="text-xs px-2 py-1 border rounded"
                         >
-                          {retrying === log.event_id
-                            ? "Retrying..."
-                            : "Retry"}
+                          {retrying === log.event_id ? "Retrying..." : "Retry"}
                         </button>
                       )}
                     </div>
 
-                    {/* Meta */}
-                    <div className="flex gap-3 text-xs text-muted-foreground flex-wrap">
-
+                    <div className="text-xs text-muted-foreground flex gap-3 flex-wrap">
                       <span>Attempt {log.attempt}</span>
-
-                      {log.status_code && (
-                        <span>HTTP {log.status_code}</span>
-                      )}
+                      {log.status_code && <span>HTTP {log.status_code}</span>}
 
                       {parsed?.duration_ms && (
                         <span className="flex items-center gap-1">
@@ -415,24 +395,19 @@ export default function TargetLogs({ targetId }: { targetId: string }) {
                       )}
                     </div>
 
-                    {/* Response */}
                     {parsed && (
-                      <details className="text-xs mt-1">
-                        <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
-                          View response
-                        </summary>
-
-                        <pre className="mt-2 p-2 bg-muted rounded overflow-auto text-[10px] max-h-48">
+                      <details className="text-xs">
+                        <summary>View response</summary>
+                        <pre className="mt-2 bg-muted p-2 rounded text-[10px]">
                           {typeof parsed === "string"
-                            ? parsed.slice(0, 500)
+                            ? parsed.slice(0, 300)
                             : JSON.stringify(parsed, null, 2)}
                         </pre>
                       </details>
                     )}
                   </div>
 
-                  {/* Time */}
-                  <div className="text-xs text-muted-foreground whitespace-nowrap">
+                  <div className="text-xs text-muted-foreground">
                     {new Date(log.created_at).toLocaleTimeString()}
                   </div>
                 </div>

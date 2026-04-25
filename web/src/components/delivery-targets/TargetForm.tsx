@@ -1,9 +1,11 @@
+
 // "use client"
 
 // import { useState } from "react"
 // import type {
 //   DeliveryTarget,
 //   DeliveryTargetPayload,
+//   TargetConfig,
 // } from "@/types/delivery-target"
 
 // /* ---------------- TYPES ---------------- */
@@ -16,19 +18,12 @@
 
 // const PROVIDERS = ["stripe", "shopify", "github", "slack"]
 
-
-// async function retryEvent(eventId: number) {
-//     await fetch(
-//       `${process.env.NEXT_PUBLIC_API_URL}/events/${eventId}/replay`,
-//       {
-//         method: "POST",
-//         credentials: "include",
-//       }
-//     )
-//   }
-
-
 // /* ---------------- COMPONENT ---------------- */
+
+
+
+
+
 
 // export default function TargetForm({ initial, onSubmit, loading }: Props) {
 //   const [name, setName] = useState(initial?.name || "")
@@ -37,16 +32,21 @@
 //     initial?.providers || []
 //   )
 
-//   const [config, setConfig] = useState<Record<string, string>>(
-//     (initial?.config as Record<string, string>) || {}
+//   const [config, setConfig] = useState<TargetConfig>(
+//     initial?.config || {}
 //   )
 
 //   /* ---------------- CONFIG UPDATE ---------------- */
 
-//   function updateConfig(key: string, value: string) {
-//     setConfig((prev) => ({ ...prev, [key]: value }))
+//   function updateConfig<K extends keyof TargetConfig>(
+//     key: K,
+//     value: TargetConfig[K]
+//   ) {
+//     setConfig((prev) => ({
+//       ...prev,
+//       [key]: value,
+//     }))
 //   }
-
 //   /* ---------------- PROVIDERS ---------------- */
 
 //   function toggleProvider(p: string) {
@@ -63,46 +63,51 @@
 //     switch (type) {
 //       case "http":
 //         return (
-//             <>
+//           <>
 //             <input
 //               placeholder="URL"
 //               value={config.url || ""}
 //               onChange={(e) => updateConfig("url", e.target.value)}
 //               className="input"
 //             />
-      
+
 //             <input
 //               placeholder="Method (POST)"
 //               value={config.method || ""}
 //               onChange={(e) => updateConfig("method", e.target.value)}
 //               className="input"
 //             />
-      
+
 //             <input
 //               placeholder="Timeout (ms)"
 //               value={config.timeout || ""}
 //               onChange={(e) => updateConfig("timeout", e.target.value)}
 //               className="input"
 //             />
-      
+
 //             <input
 //               placeholder="Retries"
 //               value={config.retries || ""}
 //               onChange={(e) => updateConfig("retries", e.target.value)}
 //               className="input"
 //             />
-      
+
 //             <input
 //               placeholder="Secret (optional)"
 //               value={config.secret || ""}
 //               onChange={(e) => updateConfig("secret", e.target.value)}
 //               className="input"
 //             />
-      
-//             {/* Headers */}
+
 //             <textarea
-//               placeholder='Headers (JSON) → {"Authorization": "Bearer xxx"}'
-//               value={config.headers || ""}
+//               placeholder='Headers JSON → {"Authorization":"Bearer xxx"}'
+//               value={
+//                 typeof config.headers === "string"
+//                   ? config.headers
+//                   : config.headers
+//                   ? JSON.stringify(config.headers, null, 2)
+//                   : ""
+//               }
 //               onChange={(e) => updateConfig("headers", e.target.value)}
 //               className="input h-20"
 //             />
@@ -163,87 +168,73 @@
 //           </>
 //         )
 
-//         case "rabbitmq":
-//   return (
-//     <>
-//     <input
-//       placeholder="Host (amqp://...)"
-//       value={config.host || ""}
-//       onChange={(e) => updateConfig("host", e.target.value)}
-//       className="input"
-//     />
+//       case "rabbitmq":
+//         return (
+//           <>
+//             <input
+//               placeholder="Host (amqp://...)"
+//               value={config.host || ""}
+//               onChange={(e) => updateConfig("host", e.target.value)}
+//               className="input"
+//             />
 
-//     <input
-//       placeholder="Exchange"
-//       value={config.exchange || ""}
-//       onChange={(e) => updateConfig("exchange", e.target.value)}
-//       className="input"
-//     />
+//             <input
+//               placeholder="Exchange"
+//               value={config.exchange || ""}
+//               onChange={(e) => updateConfig("exchange", e.target.value)}
+//               className="input"
+//             />
 
-//     <input
-//       placeholder="Routing Key"
-//       value={config.routingKey || ""}
-//       onChange={(e) => updateConfig("routingKey", e.target.value)}
-//       className="input"
-//     />
-//   </>
-//   )
+//             <input
+//               placeholder="Routing Key"
+//               value={config.routingKey || ""}
+//               onChange={(e) => updateConfig("routingKey", e.target.value)}
+//               className="input"
+//             />
+//           </>
+//         )
 
-//   case "slack":
-//   return (
-//     <>
-//       <input
-//         placeholder="Webhook URL"
-//         value={config.webhookUrl || ""}
-//         onChange={(e) => updateConfig("webhookUrl", e.target.value)}
-//         className="input"
-//       />
+//       case "slack":
+//         return (
+//           <>
+//             <input
+//               placeholder="Webhook URL"
+//               value={config.webhookUrl || ""}
+//               onChange={(e) => updateConfig("webhookUrl", e.target.value)}
+//               className="input"
+//             />
+//           </>
+//         )
 
-//       <input
-//         placeholder="Channel (optional)"
-//         value={config.channel || ""}
-//         onChange={(e) => updateConfig("channel", e.target.value)}
-//         className="input"
-//       />
+//       case "email":
+//         return (
+//           <>
+//             <input
+//               placeholder="Recipients (comma separated)"
+//               value={config.recipients || ""}
+//               onChange={(e) => updateConfig("recipients", e.target.value)}
+//               className="input"
+//             />
 
-//       <input
-//         placeholder="Username (optional)"
-//         value={config.username || ""}
-//         onChange={(e) => updateConfig("username", e.target.value)}
-//         className="input"
-//       />
-//     </>
-//   )
+//             <input
+//               placeholder="Subject"
+//               value={config.subject || ""}
+//               onChange={(e) => updateConfig("subject", e.target.value)}
+//               className="input"
+//             />
 
-//   case "email":
-//   return (
-//     <>
-//     <input
-//       placeholder="Recipients (comma separated)"
-//       value={config.recipients || ""}
-//       onChange={(e) => updateConfig("recipients", e.target.value)}
-//       className="input"
-//     />
-
-//     <input
-//       placeholder="Subject"
-//       value={config.subject || ""}
-//       onChange={(e) => updateConfig("subject", e.target.value)}
-//       className="input"
-//     />
-
-//     <label className="text-xs flex items-center gap-2">
-//       <input
-//         type="checkbox"
-//         checked={config.includePayload === "true"}
-//         onChange={(e) =>
-//           updateConfig("includePayload", String(e.target.checked))
-//         }
-//       />
-//       Include payload in email
-//     </label>
-//   </>
-//   )
+//             <label className="text-xs flex items-center gap-2">
+//               <input
+//                 type="checkbox"
+//                 checked={config.includePayload === true}
+//                 onChange={(e) =>
+//                   updateConfig("includePayload", e.target.checked)
+//                 }
+//               />
+//               Include payload
+//             </label>
+//           </>
+//         )
 
 //       case "grpc":
 //         return (
@@ -254,32 +245,50 @@
 //               onChange={(e) => updateConfig("grpcUrl", e.target.value)}
 //               className="input"
 //             />
-//             <input
-//               placeholder="Service Name"
-//               value={config.service || ""}
-//               onChange={(e) => updateConfig("service", e.target.value)}
-//               className="input"
-//             />
 //           </>
 //         )
-    
 
 //       default:
-//         return (
-//           <p className="text-sm text-muted-foreground">
-//             No config required
-//           </p>
-//         )
+//         return null
 //     }
 //   }
 
 //   /* ---------------- SUBMIT ---------------- */
 
 //   async function handleSubmit() {
+//     if (!name) {
+//       alert("Target name is required")
+//       return
+//     }
+
+//     if (type === "http" && !config.url) {
+//       alert("URL is required")
+//       return
+//     }
+
+//     if (type === "kafka" && !config.topic) {
+//       alert("Topic is required")
+//       return
+//     }
+
+//     if (type === "rabbitmq" && !config.host) {
+//       alert("Host is required")
+//       return
+//     }
+
+//     if (type === "slack" && !config.webhookUrl) {
+//       alert("Webhook URL required")
+//       return
+//     }
+
+//     if (type === "email" && !config.recipients) {
+//       alert("Recipients required")
+//       return
+//     }
 
 //     const finalConfig = { ...config }
 
-//     // Convert headers string → JSON
+//     // parse headers JSON safely
 //     if (typeof finalConfig.headers === "string") {
 //       try {
 //         finalConfig.headers = JSON.parse(finalConfig.headers)
@@ -288,24 +297,11 @@
 //         return
 //       }
 //     }
-//     if (!name) {
-//         alert("Target name is required")
-//         return
-//       }
-      
-//       if (type === "http" && !config.url) {
-//         alert("URL is required")
-//         return
-//       }
-      
-//       if (type === "kafka" && !config.topic) {
-//         alert("Topic is required")
-//         return
-//       }
+
 //     await onSubmit({
 //       name,
 //       type,
-//       config,
+//       config: finalConfig,
 //       providers,
 //     })
 //   }
@@ -325,23 +321,21 @@
 
 //       {/* Type */}
 //       <select
-//   value={type}
-//   onChange={(e) => {
-//     setType(e.target.value)
-//     setConfig({}) 
-//   }}
-//   className="input"
-// >
+//         value={type}
+//         onChange={(e) => {
+//           setType(e.target.value)
+//           setConfig({})
+//         }}
+//         className="input"
+//       >
 //         <option value="http">HTTP</option>
-// <option value="kafka">Kafka</option>
-// <option value="redis">Redis</option>
-// <option value="sqs">SQS</option>
-// <option value="grpc">gRPC</option>
-
-
-// <option value="rabbitmq">RabbitMQ</option>
-// <option value="slack">Slack</option>
-// <option value="email">Email</option>
+//         <option value="kafka">Kafka</option>
+//         <option value="redis">Redis</option>
+//         <option value="sqs">SQS</option>
+//         <option value="grpc">gRPC</option>
+//         <option value="rabbitmq">RabbitMQ</option>
+//         <option value="slack">Slack</option>
+//         <option value="email">Email</option>
 //       </select>
 
 //       {/* Config */}
@@ -368,10 +362,8 @@
 //             >
 //               {p}
 //             </button>
-            
 //           ))}
 //         </div>
-        
 //       </div>
 
 //       {/* Submit */}
@@ -385,11 +377,6 @@
 //     </div>
 //   )
 // }
-
-
-
-
-
 
 
 
@@ -418,11 +405,6 @@ const PROVIDERS = ["stripe", "shopify", "github", "slack"]
 
 /* ---------------- COMPONENT ---------------- */
 
-
-
-
-
-
 export default function TargetForm({ initial, onSubmit, loading }: Props) {
   const [name, setName] = useState(initial?.name || "")
   const [type, setType] = useState(initial?.type || "http")
@@ -434,17 +416,17 @@ export default function TargetForm({ initial, onSubmit, loading }: Props) {
     initial?.config || {}
   )
 
+  const [error, setError] = useState<string | null>(null)
+
   /* ---------------- CONFIG UPDATE ---------------- */
 
   function updateConfig<K extends keyof TargetConfig>(
     key: K,
     value: TargetConfig[K]
   ) {
-    setConfig((prev) => ({
-      ...prev,
-      [key]: value,
-    }))
+    setConfig((prev) => ({ ...prev, [key]: value }))
   }
+
   /* ---------------- PROVIDERS ---------------- */
 
   function toggleProvider(p: string) {
@@ -462,40 +444,11 @@ export default function TargetForm({ initial, onSubmit, loading }: Props) {
       case "http":
         return (
           <>
-            <input
-              placeholder="URL"
-              value={config.url || ""}
-              onChange={(e) => updateConfig("url", e.target.value)}
-              className="input"
-            />
-
-            <input
-              placeholder="Method (POST)"
-              value={config.method || ""}
-              onChange={(e) => updateConfig("method", e.target.value)}
-              className="input"
-            />
-
-            <input
-              placeholder="Timeout (ms)"
-              value={config.timeout || ""}
-              onChange={(e) => updateConfig("timeout", e.target.value)}
-              className="input"
-            />
-
-            <input
-              placeholder="Retries"
-              value={config.retries || ""}
-              onChange={(e) => updateConfig("retries", e.target.value)}
-              className="input"
-            />
-
-            <input
-              placeholder="Secret (optional)"
-              value={config.secret || ""}
-              onChange={(e) => updateConfig("secret", e.target.value)}
-              className="input"
-            />
+            <input placeholder="URL" value={config.url || ""} onChange={(e) => updateConfig("url", e.target.value)} className="input" />
+            <input placeholder="Method (POST)" value={config.method || ""} onChange={(e) => updateConfig("method", e.target.value)} className="input" />
+            <input placeholder="Timeout (ms)" value={config.timeout || ""} onChange={(e) => updateConfig("timeout", e.target.value)} className="input" />
+            <input placeholder="Retries" value={config.retries || ""} onChange={(e) => updateConfig("retries", e.target.value)} className="input" />
+            <input placeholder="Secret" value={config.secret || ""} onChange={(e) => updateConfig("secret", e.target.value)} className="input" />
 
             <textarea
               placeholder='Headers JSON → {"Authorization":"Bearer xxx"}'
@@ -509,126 +462,71 @@ export default function TargetForm({ initial, onSubmit, loading }: Props) {
               onChange={(e) => updateConfig("headers", e.target.value)}
               className="input h-20"
             />
+
+            <textarea
+              placeholder="Transform (optional JS/template)"
+              value={config.transform || ""}
+              onChange={(e) => updateConfig("transform", e.target.value)}
+              className="input h-20"
+            />
           </>
         )
 
       case "kafka":
         return (
           <>
-            <input
-              placeholder="Brokers"
-              value={config.brokers || ""}
-              onChange={(e) => updateConfig("brokers", e.target.value)}
-              className="input"
-            />
-            <input
-              placeholder="Topic"
-              value={config.topic || ""}
-              onChange={(e) => updateConfig("topic", e.target.value)}
-              className="input"
-            />
+            <input placeholder="Brokers" value={config.brokers || ""} onChange={(e) => updateConfig("brokers", e.target.value)} className="input" />
+            <input placeholder="Topic" value={config.topic || ""} onChange={(e) => updateConfig("topic", e.target.value)} className="input" />
+            <input placeholder="Client ID" value={config.clientId || ""} onChange={(e) => updateConfig("clientId", e.target.value)} className="input" />
+            <input placeholder="Username" value={config.username || ""} onChange={(e) => updateConfig("username", e.target.value)} className="input" />
+            <input placeholder="Password" type="password" value={config.password || ""} onChange={(e) => updateConfig("password", e.target.value)} className="input" />
           </>
         )
 
       case "redis":
         return (
           <>
-            <input
-              placeholder="Redis URL"
-              value={config.redisUrl || ""}
-              onChange={(e) => updateConfig("redisUrl", e.target.value)}
-              className="input"
-            />
-            <input
-              placeholder="Channel"
-              value={config.channel || ""}
-              onChange={(e) => updateConfig("channel", e.target.value)}
-              className="input"
-            />
+            <input placeholder="Redis URL" value={config.redisUrl || ""} onChange={(e) => updateConfig("redisUrl", e.target.value)} className="input" />
+            <input placeholder="Channel" value={config.channel || ""} onChange={(e) => updateConfig("channel", e.target.value)} className="input" />
           </>
         )
 
       case "sqs":
         return (
           <>
-            <input
-              placeholder="Queue URL"
-              value={config.queueUrl || ""}
-              onChange={(e) => updateConfig("queueUrl", e.target.value)}
-              className="input"
-            />
-            <input
-              placeholder="Region"
-              value={config.region || ""}
-              onChange={(e) => updateConfig("region", e.target.value)}
-              className="input"
-            />
+            <input placeholder="Queue URL" value={config.queueUrl || ""} onChange={(e) => updateConfig("queueUrl", e.target.value)} className="input" />
+            <input placeholder="Region" value={config.region || ""} onChange={(e) => updateConfig("region", e.target.value)} className="input" />
+            <input placeholder="Access Key ID" value={config.accessKeyId || ""} onChange={(e) => updateConfig("accessKeyId", e.target.value)} className="input" />
+            <input placeholder="Secret Access Key" value={config.secretAccessKey || ""} onChange={(e) => updateConfig("secretAccessKey", e.target.value)} className="input" />
+            <input placeholder="Message Group ID (FIFO)" value={config.messageGroupId || ""} onChange={(e) => updateConfig("messageGroupId", e.target.value)} className="input" />
           </>
         )
 
       case "rabbitmq":
         return (
           <>
-            <input
-              placeholder="Host (amqp://...)"
-              value={config.host || ""}
-              onChange={(e) => updateConfig("host", e.target.value)}
-              className="input"
-            />
-
-            <input
-              placeholder="Exchange"
-              value={config.exchange || ""}
-              onChange={(e) => updateConfig("exchange", e.target.value)}
-              className="input"
-            />
-
-            <input
-              placeholder="Routing Key"
-              value={config.routingKey || ""}
-              onChange={(e) => updateConfig("routingKey", e.target.value)}
-              className="input"
-            />
+            <input placeholder="Host (amqp://...)" value={config.host || ""} onChange={(e) => updateConfig("host", e.target.value)} className="input" />
+            <input placeholder="Exchange" value={config.exchange || ""} onChange={(e) => updateConfig("exchange", e.target.value)} className="input" />
+            <input placeholder="Routing Key" value={config.routingKey || ""} onChange={(e) => updateConfig("routingKey", e.target.value)} className="input" />
           </>
         )
 
       case "slack":
         return (
           <>
-            <input
-              placeholder="Webhook URL"
-              value={config.webhookUrl || ""}
-              onChange={(e) => updateConfig("webhookUrl", e.target.value)}
-              className="input"
-            />
+            <input placeholder="Webhook URL" value={config.webhookUrl || ""} onChange={(e) => updateConfig("webhookUrl", e.target.value)} className="input" />
+            <input placeholder="Channel (#alerts)" value={config.channel || ""} onChange={(e) => updateConfig("channel", e.target.value)} className="input" />
+            <input placeholder="Mention on error (@team)" value={config.mentionOnError || ""} onChange={(e) => updateConfig("mentionOnError", e.target.value)} className="input" />
           </>
         )
 
       case "email":
         return (
           <>
-            <input
-              placeholder="Recipients (comma separated)"
-              value={config.recipients || ""}
-              onChange={(e) => updateConfig("recipients", e.target.value)}
-              className="input"
-            />
-
-            <input
-              placeholder="Subject"
-              value={config.subject || ""}
-              onChange={(e) => updateConfig("subject", e.target.value)}
-              className="input"
-            />
-
+            <input placeholder="Recipients" value={config.recipients || ""} onChange={(e) => updateConfig("recipients", e.target.value)} className="input" />
+            <input placeholder="Subject" value={config.subject || ""} onChange={(e) => updateConfig("subject", e.target.value)} className="input" />
             <label className="text-xs flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={config.includePayload === true}
-                onChange={(e) =>
-                  updateConfig("includePayload", e.target.checked)
-                }
-              />
+              <input type="checkbox" checked={config.includePayload === true} onChange={(e) => updateConfig("includePayload", e.target.checked)} />
               Include payload
             </label>
           </>
@@ -637,12 +535,8 @@ export default function TargetForm({ initial, onSubmit, loading }: Props) {
       case "grpc":
         return (
           <>
-            <input
-              placeholder="gRPC URL"
-              value={config.grpcUrl || ""}
-              onChange={(e) => updateConfig("grpcUrl", e.target.value)}
-              className="input"
-            />
+            <input placeholder="gRPC URL" value={config.grpcUrl || ""} onChange={(e) => updateConfig("grpcUrl", e.target.value)} className="input" />
+            <input placeholder="Service Name" value={config.service || ""} onChange={(e) => updateConfig("service", e.target.value)} className="input" />
           </>
         )
 
@@ -654,45 +548,22 @@ export default function TargetForm({ initial, onSubmit, loading }: Props) {
   /* ---------------- SUBMIT ---------------- */
 
   async function handleSubmit() {
-    if (!name) {
-      alert("Target name is required")
-      return
-    }
+    setError(null)
 
-    if (type === "http" && !config.url) {
-      alert("URL is required")
-      return
-    }
-
-    if (type === "kafka" && !config.topic) {
-      alert("Topic is required")
-      return
-    }
-
-    if (type === "rabbitmq" && !config.host) {
-      alert("Host is required")
-      return
-    }
-
-    if (type === "slack" && !config.webhookUrl) {
-      alert("Webhook URL required")
-      return
-    }
-
-    if (type === "email" && !config.recipients) {
-      alert("Recipients required")
-      return
-    }
+    if (!name) return setError("Target name is required")
+    if (type === "http" && !config.url) return setError("URL is required")
+    if (type === "kafka" && !config.topic) return setError("Topic required")
+    if (type === "rabbitmq" && !config.host) return setError("Host required")
+    if (type === "slack" && !config.webhookUrl) return setError("Webhook required")
+    if (type === "email" && !config.recipients) return setError("Recipients required")
 
     const finalConfig = { ...config }
 
-    // parse headers JSON safely
     if (typeof finalConfig.headers === "string") {
       try {
         finalConfig.headers = JSON.parse(finalConfig.headers)
       } catch {
-        alert("Invalid headers JSON")
-        return
+        return setError("Invalid headers JSON")
       }
     }
 
@@ -709,7 +580,12 @@ export default function TargetForm({ initial, onSubmit, loading }: Props) {
   return (
     <div className="space-y-5">
 
-      {/* Name */}
+      {error && (
+        <div className="text-xs text-red-500 bg-red-50 p-2 rounded">
+          {error}
+        </div>
+      )}
+
       <input
         placeholder="Target name"
         value={name}
@@ -717,7 +593,6 @@ export default function TargetForm({ initial, onSubmit, loading }: Props) {
         className="input"
       />
 
-      {/* Type */}
       <select
         value={type}
         onChange={(e) => {
@@ -736,13 +611,11 @@ export default function TargetForm({ initial, onSubmit, loading }: Props) {
         <option value="email">Email</option>
       </select>
 
-      {/* Config */}
       <div className="space-y-2">
         <p className="text-sm font-medium">Configuration</p>
         {renderFields()}
       </div>
 
-      {/* Providers */}
       <div className="space-y-2">
         <p className="text-sm font-medium">Providers</p>
 
@@ -764,7 +637,6 @@ export default function TargetForm({ initial, onSubmit, loading }: Props) {
         </div>
       </div>
 
-      {/* Submit */}
       <button
         onClick={handleSubmit}
         disabled={loading}

@@ -74,11 +74,15 @@ export type HttpConfig = {
   retries?: string
   secret?: string
   headers?: string | Record<string, string>
+  transform?: string
 }
 
 export type KafkaConfig = {
   brokers?: string
   topic?: string
+  clientId?: string
+  username?: string 
+  password?: string
 }
 
 export type RedisConfig = {
@@ -89,6 +93,9 @@ export type RedisConfig = {
 export type SqsConfig = {
   queueUrl?: string
   region?: string
+  accessKeyId?: string 
+  secretAccessKey?: string 
+  messageGroupId?: string
 }
 
 export type RabbitMQConfig = {
@@ -99,6 +106,8 @@ export type RabbitMQConfig = {
 
 export type SlackConfig = {
   webhookUrl?: string
+  channel?: string 
+  mentionOnError?: string
 }
 
 export type EmailConfig = {
@@ -109,6 +118,7 @@ export type EmailConfig = {
 
 export type GrpcConfig = {
   grpcUrl?: string
+  service?: string
 }
 
 
