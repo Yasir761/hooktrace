@@ -13,7 +13,7 @@ def deliver_http(config, payload):
     method = (config.get("method") or "POST").upper()
     headers = config.get("headers") or {}
     timeout = int(config.get("timeout") or 10)
- 
+    headers["Content-Type"] = "application/json"
     start = time.time()
  
 

@@ -20,7 +20,7 @@ def deliver_rabbitmq(config, payload):
 
     channel.basic_publish(
         exchange=exchange,
-        routing_key=config.routing_key,
+        routing_key=routing_key,
         body=json.dumps(payload)
     )
 

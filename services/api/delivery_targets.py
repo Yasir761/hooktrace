@@ -14,6 +14,7 @@ from sqlalchemy import text
 
 from .database import SessionLocal
 from .auth import get_current_user
+from services.worker.delivery_targets_router import route_webhook_to_targets
 
 router = APIRouter(prefix="/delivery-targets", tags=["delivery-targets"])
 
@@ -341,9 +342,6 @@ def test_delivery_target(target_id: str, user_id: str = Depends(get_current_user
         if not target[2]:
             raise HTTPException(status_code=400, detail="Target is disabled")
 
-        target_type = target[0]
-        config = target[1] if isinstance(target[1], dict) else json.loads(target[1])
-
         test_payload = {
             "id": "test_" + str(uuid.uuid4()),
             "event": "test.webhook",
@@ -355,70 +353,42 @@ def test_delivery_target(target_id: str, user_id: str = Depends(get_current_user
             }
         }
 
-        try:
-            if target_type == "http":
-                from services.worker.delivery.http import deliver_http
-                result = deliver_http(config, test_payload)
+        result = route_webhook_to_targets(
+    user_id=user_id,
+    webhook_data=test_payload,
+    provider=None,
+    target_id=target_id
+)
 
-            elif target_type == "sqs":
-                from services.worker.delivery.sqs import deliver_sqs
-                result = deliver_sqs(config, test_payload)
+        db.execute(
+            text("""
+                UPDATE delivery_targets
+                SET success_count = success_count + 1,
+                    last_used = CURRENT_TIMESTAMP
+                WHERE id = :id
+            """),
+            {"id": target_id}
+        )
+        db.commit()
 
-            elif target_type == "kafka":
-                from services.worker.delivery.kafka import deliver_kafka
-                result = deliver_kafka(config, test_payload)
+        return {"success": True, "result": result}
 
-            elif target_type == "rabbitmq":
-                from services.worker.delivery.rabbitmq import deliver_rabbitmq
-                result = deliver_rabbitmq(config, test_payload)
-            elif target_type == "slack":
-                from services.worker.delivery.slack import deliver_slack
-                result == deliver_slack(config,test_payload)
-            elif target_type == "email":
-                from services.worker.delivery.email import deliver_email
-                result = deliver_email(config,test_payload)
-            elif target_type == "redis":
-                from services.worker.delivery.redis import deliver_redis
-                result = deliver_redis(config, test_payload)
+    except Exception as e:
+        db.execute(
+            text("""
+                UPDATE delivery_targets
+                SET error_count = error_count + 1,
+                    last_used = CURRENT_TIMESTAMP
+                WHERE id = :id
+            """),
+            {"id": target_id}
+        )
+        db.commit()
 
-            elif target_type == "grpc":
-                from services.worker.delivery.grpc import deliver_grpc
-                result = deliver_grpc(config, test_payload)
-
-            else:
-                raise HTTPException(status_code=400, detail=f"Unsupported target type: {target_type}")
-
-            db.execute(
-                text("""
-                    UPDATE delivery_targets
-                    SET success_count = success_count + 1,
-                        last_used = CURRENT_TIMESTAMP
-                    WHERE id = :id
-                """),
-                {"id": target_id}
-            )
-            db.commit()
-
-            return {"success": True, "result": result, "message": "Test webhook sent successfully"}
-
-        except Exception as e:
-            db.execute(
-                text("""
-                    UPDATE delivery_targets
-                    SET error_count = error_count + 1,
-                        last_used = CURRENT_TIMESTAMP
-                    WHERE id = :id
-                """),
-                {"id": target_id}
-            )
-            db.commit()
-
-            return {"success": False, "error": str(e)}
+        return {"success": False, "error": str(e)}
 
     finally:
         db.close()
-
-
 
 @router.get("/{id}/logs")
 def get_target_logs(id: str, user_id: str = Depends(get_current_user)):
