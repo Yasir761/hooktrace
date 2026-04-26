@@ -301,6 +301,20 @@ class DeliveryTargetsRouter:
         except ImportError:
             pass
 
+        try:
+            from services.worker.delivery.slack import deliver_slack
+            self.worker['slack'] = deliver_slack
+        except ImportError:
+            pass
+
+        try:
+            from services.worker.delivery.email import deliver_email
+            self.worker['email'] = deliver_email
+        except ImportError:
+            pass
+
+
+
     def get_active_targets(self, user_id: str, provider: str = None) -> List[Dict[str, Any]]:
         """
         Get all active delivery targets for a user

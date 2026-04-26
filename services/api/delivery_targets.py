@@ -371,7 +371,12 @@ def test_delivery_target(target_id: str, user_id: str = Depends(get_current_user
             elif target_type == "rabbitmq":
                 from services.worker.delivery.rabbitmq import deliver_rabbitmq
                 result = deliver_rabbitmq(config, test_payload)
-
+            elif target_type == "slack":
+                from services.worker.delivery.slack import deliver_slack
+                result == deliver_slack(config,test_payload)
+            elif target_type == "email":
+                from services.worker.delivery.email import deliver_email
+                result = deliver_email(config,test_payload)
             elif target_type == "redis":
                 from services.worker.delivery.redis import deliver_redis
                 result = deliver_redis(config, test_payload)
@@ -418,7 +423,20 @@ def test_delivery_target(target_id: str, user_id: str = Depends(get_current_user
 @router.get("/{id}/logs")
 def get_target_logs(id: str, user_id: str = Depends(get_current_user)):
     db = SessionLocal()
-    try:
+
+    try :
+        target = db.execute(
+            text(
+                """
+                SELECT id
+                FROM delivery_targets
+                WHERE id = :id AND user_id = :user_id
+                """
+            ),
+            {"id":id, "user_id": user_id}
+        ).fetchone()
+        if not target:
+            raise HTTPException(status_code=404, detail="Target not found")
         rows = db.execute(
             text("""
                 SELECT *

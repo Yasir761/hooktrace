@@ -2,19 +2,25 @@ import json
 import pika
 
 
-def deliver(config, payload, headers=None):
+def deliver_rabbitmq(config, payload):
+    host = config.get("host", "rabbitmq")
+    exchange = config.get("exchange")
+    if not exchange:
+        raise ValueError("Missing RabbitMQ exchange")
+
+    routing_key = config.get("routingKey") or config.get("routing_key") or ""
 
     connection = pika.BlockingConnection(
         pika.ConnectionParameters(
-            host=config.get("host", "rabbitmq")
+          host = host
         )
     )
 
     channel = connection.channel()
 
     channel.basic_publish(
-        exchange=config["exchange"],
-        routing_key=config.get("routing_key", ""),
+        exchange=exchange,
+        routing_key=config.routing_key,
         body=json.dumps(payload)
     )
 

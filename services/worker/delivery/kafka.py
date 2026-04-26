@@ -2,14 +2,17 @@ import json
 from kafka import KafkaProducer
 
 
-def deliver(config, payload, headers=None):
+def deliver_kafka(config, payload):
+    topic = config.get("topic")
+    if not topic:
+        raise ValueError("Missing Kafka topic") 
 
     producer = KafkaProducer(
         bootstrap_servers=config.get("brokers", "localhost:9092")
     )
 
     producer.send(
-        config["topic"],
+        topic,
         json.dumps(payload).encode()
     )
 

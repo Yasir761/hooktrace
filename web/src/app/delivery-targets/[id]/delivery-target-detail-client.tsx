@@ -60,11 +60,36 @@ export default function DeliveryTargetDetailClient({
   })
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/delivery-targets/${currentTarget.id}/logs`, {
-      credentials: "include"
-    })
-      .then(res => res.json())
-      .then(data => setLogs(data.items || []))
+    let mounted = true
+  
+    const loadLogs = async () => {
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/delivery-targets/${currentTarget.id}/logs`,
+          { credentials: "include" }
+        )
+  
+        if (!res.ok) {
+          throw new Error(`Failed to fetch logs (${res.status})`)
+        }
+  
+        const data = await res.json()
+  
+        if (mounted) setLogs(data.items || [])
+      } catch (err) {
+        console.error("Failed to load delivery target logs", err)
+        if (mounted) {
+          setLogs([])
+          toast.error("Could not load logs")
+        }
+      }
+    }
+  
+    loadLogs()
+  
+    return () => {
+      mounted = false
+    }
   }, [currentTarget.id])
 
   useEffect(() => {

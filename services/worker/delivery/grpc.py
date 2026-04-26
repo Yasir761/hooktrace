@@ -1,12 +1,15 @@
 import grpc
 
 
-def deliver(config, payload, headers=None):
+def deliver_grpc(config, payload):
+    endpoint = config.get("grpcUrl") or config.get("endpoint")
+    if not endpoint:
+        raise ValueError('Missing gRPC endpoint {grpcUrl}')
+    channel = grpc.insecure_channel("endpoint")
 
-    channel = grpc.insecure_channel(config["endpoint"])
+    # Placeholder for actual protobuf service ninvocation
 
-    # Placeholder for actual protobuf service
-    print("gRPC delivery placeholder")
+    _=(channel,payload)
 
     return {
         "status_code": 200,
