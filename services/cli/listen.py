@@ -121,7 +121,7 @@ while True:
 
     try:
         res = requests.post(
-            f"{LOCAL_URL}/webhook/{provider}",
+            f"{LOCAL_URL}/webhook/{TOKEN}",
             json=payload,
             headers=headers,
         )

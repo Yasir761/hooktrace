@@ -76,7 +76,7 @@
 from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import text
 from .database import SessionLocal
-from .redis_client import redis_client
+from services.shared.redis_client import redis_client
 
 router = APIRouter(prefix="/events", tags=["replay"])
 QUEUE_MAIN = "webhook:queue"

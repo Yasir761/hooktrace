@@ -1,6 +1,6 @@
 import json
 import redis
-from services.worker.redis_client import redis_client
+from services.shared.redis_client import redis_client
 
 
 def _get_redis_client(config):

@@ -64,7 +64,7 @@ class TunnelManager:
                     #  Forward to local dev server
                     async with httpx.AsyncClient(timeout=30.0) as client:
                         response = await client.post(
-                            f"{local_url}/webhook/{provider}",
+                            f"{local_url}/webhook/{token}",
                             json=payload,
                             headers=headers,
                         )
@@ -78,7 +78,7 @@ class TunnelManager:
                         db,
                         tunnel_id=tunnel_id,
                         method="POST",
-                        path=f"/webhook/{provider}",
+                        path=f"/webhook/{token}",
                         status_code=response.status_code,
                         duration_ms=duration_ms,
                         provider=provider,

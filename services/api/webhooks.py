@@ -11,8 +11,9 @@ import json
 
 from .database import SessionLocal
 from ..worker.delivery_targets_router import route_webhook_to_targets 
-from ..api.redis_client import redis_client
+from services.shared.redis_client import redis_client
 from ..api.ws import manager  
+from services.shared.aggregation_dispatcher import dispatch_webhook
 
 router = APIRouter(prefix="/webhook", tags=["webhooks"])
 
@@ -114,7 +115,14 @@ async def receive_webhook(
         # -----------------------------
         # Queue for async processing
         # -----------------------------
-        redis_client.lpush("webhook:queue", str(event_id))
+        
+        print(f"[webhook] received event {event_id}")
+        await dispatch_webhook({
+        "id": event_id,
+        "user_id": user_id,
+        "provider": provider,
+        "payload": payload
+})
 
         # -----------------------------
         # OPTIONAL handler

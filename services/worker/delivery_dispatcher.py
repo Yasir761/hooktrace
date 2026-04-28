@@ -1,37 +1,33 @@
-import requests
-import json
-from redis_client import redis_client
-from .delivery_targets_router import route_webhook_to_targets
-from services.tunnels.tunnel_manager import forward_to_tunnels
+# import json
+# from services.shared.redis_client import redis_client
+# AGG_QUEUE = "webhook:aggregate"
 
 
-async def dispatch_webhook(webhook_event):
-    """
-    Main webhook dispatcher
-    Routes webhook to configured delivery targets
-    """
 
-    user_id = webhook_event.get('user_id')
-    provider = webhook_event.get('provider')
-    payload = webhook_event.get('payload')
-    headers = webhook_event.get('headers', {})
-    
-    # Route to delivery targets
-    result = route_webhook_to_targets(
-        user_id=user_id,
-        webhook_data=payload,
-        provider=provider
-    )
+# async def dispatch_webhook(webhook_event):
+#     """
+#     Main webhook dispatcher
+#     Pushes event into aggregation queue
+#     """
 
-    #  Dev mode tunnels
-    await forward_to_tunnels(
-        user_id=user_id,
-        provider=provider,
-        payload=payload,
-        headers=headers
-    )
+#     event_id = webhook_event.get("id")
 
+#     if not event_id:
+#         print("[dispatcher]  Missing event_id in webhook_event")
+#         return {"error": "missing_event_id"}
 
-    
-    print(f"Delivered to {result['successful']} targets, {result['failed']} failed")
-    return result
+#     try:
+#         print(f"[dispatcher] pushing event {event_id}")
+#         # send to aggregation
+#         redis_client.lpush("webhook:aggregate", str(event_id))
+
+#          # ALSO send to main queue (IMPORTANT)
+#         redis_client.lpush("webhook:queue", str(event_id))
+
+#         print(f"[dispatcher]  Event {event_id} queued for aggregation")
+
+#         return {"queued": True}
+
+#     except Exception as e:
+#         print(f"[dispatcher]  Failed to queue event: {str(e)}")
+#         return {"error": str(e)}

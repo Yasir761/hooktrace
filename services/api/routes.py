@@ -9,7 +9,7 @@ from .rate_limit import check_rate_limit
 
 from .database import SessionLocal
 from .models import WebhookEvent
-from .redis_client import redis_client
+from services.shared.redis_client import redis_client
 
 from .security import verify_signature
 

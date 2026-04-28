@@ -97,6 +97,28 @@ export default function BulkAggregationClient({
   const totalBatches = rules.reduce((sum, r) => sum + r.stats.batchesCreated, 0)
   const avgBatchSize = totalBatches > 0 ? (totalEvents / totalBatches).toFixed(1) : "0"
 
+
+
+
+  async function toggleRule(rule: AggregationRule) {
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/aggregation/${rule.id}`,
+      {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          enabled: !rule.enabled,
+        }),
+      }
+    )
+  
+    const updated = await res.json()
+  
+    setRules((prev) =>
+      prev.map((r) => (r.id === updated.id ? updated : r))
+    )
+  }
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-7xl px-6 py-8 space-y-8">
@@ -251,16 +273,21 @@ export default function BulkAggregationClient({
                 key={rule.id}
                 rule={rule}
                 onToggle={(id) => {
-                  setRules(
-                    rules.map((r) =>
-                      r.id === id ? { ...r, enabled: !r.enabled } : r
-                    )
-                  )
+                  const rule = rules.find(r => r.id === id)
+                  if (rule) toggleRule(rule)
                 }}
-                onDelete={(id) => {
-                  if (confirm("Delete this rule?")) {
-                    setRules(rules.filter((r) => r.id !== id))
-                  }
+                onDelete={async (id) => {
+                  if (!confirm("Delete this rule?")) return
+                
+                  await fetch(
+                    `${process.env.NEXT_PUBLIC_API_URL}/aggregation/${id}`,
+                    {
+                      method: "DELETE",
+                      credentials: "include",
+                    }
+                  )
+                
+                  setRules((prev) => prev.filter((r) => r.id !== id))
                 }}
               />
             ))}
@@ -573,38 +600,68 @@ function CreateRuleModal({
   const [deduplicate, setDeduplicate] = useState(true)
   const [isCreating, setIsCreating] = useState(false)
 
-  const handleCreate = () => {
+  // const handleCreate = () => {
+  //   setIsCreating(true)
+
+  //   setTimeout(() => {
+  //     const newRule: AggregationRule = {
+  //       id: `rule-${Date.now()}`,
+  //       name: name || `${provider} Aggregation`,
+  //       provider,
+  //       eventPatterns: ["*"],
+  //       enabled: true,
+  //       config: {
+  //         mode,
+  //         windowMs: mode === "time_window" ? windowMs : undefined,
+  //         maxBatchSize,
+  //         deduplicate,
+  //         deduplicationKey: deduplicate ? "id" : undefined,
+  //       },
+  //       stats: {
+  //         eventsProcessed: 0,
+  //         batchesCreated: 0,
+  //         averageBatchSize: 0,
+  //         duplicatesSkipped: 0,
+  //       },
+  //       createdAt: new Date().toISOString(),
+  //       lastTriggered: null,
+  //     }
+
+  //     onCreate(newRule)
+  //     setIsCreating(false)
+  //   }, 1000)
+  // }
+
+
+  async function handleCreate() {
     setIsCreating(true)
-
-    setTimeout(() => {
-      const newRule: AggregationRule = {
-        id: `rule-${Date.now()}`,
-        name: name || `${provider} Aggregation`,
-        provider,
-        eventPatterns: ["*"],
-        enabled: true,
-        config: {
-          mode,
-          windowMs: mode === "time_window" ? windowMs : undefined,
-          maxBatchSize,
-          deduplicate,
-          deduplicationKey: deduplicate ? "id" : undefined,
-        },
-        stats: {
-          eventsProcessed: 0,
-          batchesCreated: 0,
-          averageBatchSize: 0,
-          duplicatesSkipped: 0,
-        },
-        createdAt: new Date().toISOString(),
-        lastTriggered: null,
+  
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/aggregation`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          provider,
+          eventPatterns: ["*"],
+          config: {
+            mode,
+            windowMs,
+            maxBatchSize,
+            deduplicate,
+            deduplicationKey: deduplicate ? "id" : null,
+          },
+        }),
       }
-
-      onCreate(newRule)
-      setIsCreating(false)
-    }, 1000)
+    )
+  
+    const newRule = await res.json()
+  
+    onCreate(newRule)
+    setIsCreating(false)
   }
-
   return (
     <>
       {/* Backdrop */}
