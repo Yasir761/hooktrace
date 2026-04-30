@@ -12,6 +12,7 @@ router = APIRouter(prefix="/events", tags=["events"])
 @router.get("/")
 def list_events(
     status: str | None = None,
+    provider: str | None = None,
     limit: int = Query(50, le=200),
     offset: int = 0,
     user_id: str = Depends(get_current_user),
@@ -42,6 +43,10 @@ def list_events(
             "offset": offset,
         }
 
+
+        if provider:
+            base_query += "AND e.provider = :provider"
+            params["provider"] = provider
         if status:
             if status == "dlq":
                 base_query += " AND e.status = 'failed' AND e.attempt_count >= 5"

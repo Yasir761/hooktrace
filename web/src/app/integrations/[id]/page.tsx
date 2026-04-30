@@ -2,7 +2,7 @@ import { getCurrentUser } from "@/lib/auth"
 import { redirect, notFound } from "next/navigation"
 import ProviderDetailClient from "@/app/integrations/[id]/provider-detail-client"
 
-// Provider configurations (same as before)
+
 const PROVIDERS = {
   stripe: {
     id: "stripe",
@@ -307,12 +307,13 @@ export default async function ProviderDetailPage({
     
     const items = data.items as Integration[]
 
-const isConnected = items.some((i) => i.provider === params.id)
+    const integration =
+    items.find((i) => i.provider === params.id) || null
 
   return (
     <ProviderDetailClient
       provider={provider}
-      isConnected={isConnected}
+      integration={integration}
       user={user}
     />
   )

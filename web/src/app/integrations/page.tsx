@@ -132,7 +132,6 @@
 
 
 
-
 export const dynamic = "force-dynamic"
 
 import { getCurrentUser } from "@/lib/auth"
@@ -157,18 +156,19 @@ type Provider = {
 }
 
 const PROVIDERS: Provider[] = [
-  // ... your providers unchanged
+  // keep your existing providers
 ]
 
 export default async function IntegrationsPage() {
   const user = await getCurrentUser()
   if (!user) redirect("/login")
 
-    const cookieStore = cookies()
-  const cookieHeader = (await (await cookieStore)
-    .getAll())
-  .map((c) => `${c.name}=${c.value}`)
-  .join("; ")
+  const cookieStore = cookies()
+
+  const cookieHeader = (await cookieStore)
+    .getAll()
+    .map((c) => `${c.name}=${c.value}`)
+    .join("; ")
 
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/integrations`, {
     headers: {
@@ -179,7 +179,6 @@ export default async function IntegrationsPage() {
 
   const data = await res.json()
 
-  // Safe fallback (prevents crash)
   const items: Integration[] = Array.isArray(data?.items) ? data.items : []
 
   const connectedIntegrations = items.map((i) => i.provider)

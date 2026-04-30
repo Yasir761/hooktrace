@@ -471,17 +471,181 @@ type Integration = {
 
 /* ---------------- COMPONENT ---------------- */
 
+// export default function ProviderDetailClient({
+//   provider,
+//   isConnected,
+//   user,
+// }: {
+//   provider: Provider
+//   isConnected: boolean
+//   user: User
+// }) {
+//   const [copied, setCopied] = useState(false)
+//   const [integration, setIntegration] = useState<Integration | null>(null)
+//   const [selectedEvent, setSelectedEvent] = useState(
+//     provider.webhooks?.[0]?.event ?? ""
+//   )
+//   const [testStatus, setTestStatus] = useState<
+//     "idle" | "sending" | "success" | "error"
+//   >("idle")
+
+//   const webhookUrl = integration?.webhook_token
+//     ? `${process.env.NEXT_PUBLIC_API_URL}/webhook/${integration.webhook_token}`
+//     : ""
+
+//   /* ---------------- ACTIONS ---------------- */
+
+//   const copyToClipboard = (text: string) => {
+//     navigator.clipboard.writeText(text)
+//     setCopied(true)
+//     setTimeout(() => setCopied(false), 2000)
+//   }
+
+//   const handleConnect = async () => {
+//     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/integrations/${provider.id}`, {
+//       method: "POST",
+//       credentials: "include",
+//     })
+
+//     const data = await res.json()
+
+//     setIntegration({
+//       webhook_token: data.webhook_url.split("/webhook/")[1],
+//     })
+//   }
+
+//   const handleDisconnect = async () => {
+//     if (confirm("Are you sure you want to disconnect this integration?")) {
+//       await fetch(`${process.env.NEXT_PUBLIC_API_URL}/integrations/${provider.id}`, {
+//         method: "DELETE",
+//         credentials: "include",
+//       })
+
+//       setIntegration(null)
+//     }
+//   }
+
+//   const selectedWebhook = provider.webhooks.find(
+//     (w) => w.event === selectedEvent
+//   )
+
+//   const handleTestWebhook = async () => {
+//     if (!webhookUrl) return
+
+//     setTestStatus("sending")
+
+//     try {
+//       await fetch(webhookUrl, {
+//         method: "POST",
+//         headers: {
+//           "Content-Type": "application/json",
+//         },
+//         body: JSON.stringify(selectedWebhook?.examplePayload),
+//       })
+
+//       setTestStatus("success")
+//     } catch {
+//       setTestStatus("error")
+//     }
+
+//     setTimeout(() => setTestStatus("idle"), 3000)
+//   }
+
+//   /* ---------------- UI ---------------- */
+
+//   return (
+//     <div className="min-h-screen bg-background">
+//       <div className="max-w-4xl mx-auto p-6 space-y-6">
+        
+//         {/* Header */}
+//         <div className="flex justify-between items-center">
+//           <Link href="/integrations" className="text-sm text-muted-foreground">
+//             ← Back
+//           </Link>
+//           <div className="flex gap-3">
+//             <ThemeToggle />
+//             <UserNav user={user} />
+//           </div>
+//         </div>
+
+//         {/* Title */}
+//         <h1 className="text-2xl font-bold">{provider.name}</h1>
+
+//         {/* Connect / Disconnect */}
+//         {integration ? (
+//           <button
+//             onClick={handleDisconnect}
+//             className="px-4 py-2 border border-red-500 text-red-600 rounded"
+//           >
+//             Disconnect
+//           </button>
+//         ) : (
+//           <button
+//             onClick={handleConnect}
+//             className="px-4 py-2 bg-primary text-white rounded"
+//           >
+//             Connect
+//           </button>
+//         )}
+
+//         {/* Webhook URL */}
+//         {webhookUrl && (
+//           <div className="space-y-2">
+//             <p className="font-mono text-sm">{webhookUrl}</p>
+//             <button
+//               onClick={() => copyToClipboard(webhookUrl)}
+//               className="text-sm border px-3 py-1 rounded"
+//             >
+//               {copied ? "Copied" : "Copy"}
+//             </button>
+//           </div>
+//         )}
+
+//         {/* Event Selector */}
+//         <div>
+//           <select
+//             value={selectedEvent}
+//             onChange={(e) => setSelectedEvent(e.target.value)}
+//             className="border px-3 py-2 rounded"
+//           >
+//             {provider.webhooks.map((webhook) => (
+//               <option key={webhook.event} value={webhook.event}>
+//                 {webhook.event}
+//               </option>
+//             ))}
+//           </select>
+//         </div>
+
+//         {/* Test Button */}
+//         <button
+//           onClick={handleTestWebhook}
+//           className="px-4 py-2 bg-blue-600 text-white rounded"
+//         >
+//           Send Test
+//         </button>
+
+//         {/* Status */}
+//         <p>Status: {testStatus}</p>
+//       </div>
+//     </div>
+//   )
+// }
+
+
+
+
+
 export default function ProviderDetailClient({
   provider,
-  isConnected,
+  integration: initialIntegration,
   user,
 }: {
   provider: Provider
-  isConnected: boolean
+  integration: Integration | null
   user: User
 }) {
   const [copied, setCopied] = useState(false)
-  const [integration, setIntegration] = useState<Integration | null>(null)
+  const [integration, setIntegration] = useState<Integration | null>(initialIntegration)
   const [selectedEvent, setSelectedEvent] = useState(
     provider.webhooks?.[0]?.event ?? ""
   )
@@ -493,19 +657,11 @@ export default function ProviderDetailClient({
     ? `${process.env.NEXT_PUBLIC_API_URL}/webhook/${integration.webhook_token}`
     : ""
 
-  /* ---------------- ACTIONS ---------------- */
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
   const handleConnect = async () => {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/integrations/${provider.id}`, {
-      method: "POST",
-      credentials: "include",
-    })
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/integrations/${provider.id}`,
+      { method: "POST", credentials: "include" }
+    )
 
     const data = await res.json()
 
@@ -515,14 +671,14 @@ export default function ProviderDetailClient({
   }
 
   const handleDisconnect = async () => {
-    if (confirm("Are you sure you want to disconnect this integration?")) {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/integrations/${provider.id}`, {
-        method: "DELETE",
-        credentials: "include",
-      })
+    if (!confirm("Disconnect this integration?")) return
 
-      setIntegration(null)
-    }
+    await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/integrations/${provider.id}`,
+      { method: "DELETE", credentials: "include" }
+    )
+
+    setIntegration(null)
   }
 
   const selectedWebhook = provider.webhooks.find(
@@ -537,9 +693,7 @@ export default function ProviderDetailClient({
     try {
       await fetch(webhookUrl, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(selectedWebhook?.examplePayload),
       })
 
@@ -551,82 +705,33 @@ export default function ProviderDetailClient({
     setTimeout(() => setTestStatus("idle"), 3000)
   }
 
-  /* ---------------- UI ---------------- */
-
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto p-6 space-y-6">
-        
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <Link href="/integrations" className="text-sm text-muted-foreground">
-            ← Back
+    <div className="max-w-4xl mx-auto p-6 space-y-6">
+
+      <h1 className="text-2xl font-bold">{provider.name}</h1>
+
+      {/* CONNECT BUTTON */}
+      {integration ? (
+        <button onClick={handleDisconnect}>Disconnect</button>
+      ) : (
+        <button onClick={handleConnect}>Connect</button>
+      )}
+
+      {/* WEBHOOK URL */}
+      {webhookUrl && (
+        <>
+          <p>{webhookUrl}</p>
+
+          <Link href={`/events?provider=${provider.id}`}>
+            View Events →
           </Link>
-          <div className="flex gap-3">
-            <ThemeToggle />
-            <UserNav user={user} />
-          </div>
-        </div>
+        </>
+      )}
 
-        {/* Title */}
-        <h1 className="text-2xl font-bold">{provider.name}</h1>
+      {/* TEST */}
+      <button onClick={handleTestWebhook}>Send Test</button>
 
-        {/* Connect / Disconnect */}
-        {integration ? (
-          <button
-            onClick={handleDisconnect}
-            className="px-4 py-2 border border-red-500 text-red-600 rounded"
-          >
-            Disconnect
-          </button>
-        ) : (
-          <button
-            onClick={handleConnect}
-            className="px-4 py-2 bg-primary text-white rounded"
-          >
-            Connect
-          </button>
-        )}
-
-        {/* Webhook URL */}
-        {webhookUrl && (
-          <div className="space-y-2">
-            <p className="font-mono text-sm">{webhookUrl}</p>
-            <button
-              onClick={() => copyToClipboard(webhookUrl)}
-              className="text-sm border px-3 py-1 rounded"
-            >
-              {copied ? "Copied" : "Copy"}
-            </button>
-          </div>
-        )}
-
-        {/* Event Selector */}
-        <div>
-          <select
-            value={selectedEvent}
-            onChange={(e) => setSelectedEvent(e.target.value)}
-            className="border px-3 py-2 rounded"
-          >
-            {provider.webhooks.map((webhook) => (
-              <option key={webhook.event} value={webhook.event}>
-                {webhook.event}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Test Button */}
-        <button
-          onClick={handleTestWebhook}
-          className="px-4 py-2 bg-blue-600 text-white rounded"
-        >
-          Send Test
-        </button>
-
-        {/* Status */}
-        <p>Status: {testStatus}</p>
-      </div>
+      <p>Status: {testStatus}</p>
     </div>
   )
 }
