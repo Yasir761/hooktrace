@@ -1,9 +1,10 @@
+
 export const dynamic = "force-dynamic"
 
 import Link from "next/link"
 import { redirect } from "next/navigation"
-import { Copy, ArrowRight, LinkIcon } from "lucide-react"
-
+import { ArrowRight, LinkIcon } from "lucide-react"
+import CopyButton from "@/components/endpoint/copy-button"
 import { getCurrentUser } from "@/lib/auth"
 
 type Endpoint = {
@@ -15,15 +16,34 @@ type Endpoint = {
   prod_target?: string
 }
 
+import { cookies } from "next/headers"
+
 async function getEndpoints(): Promise<Endpoint[]> {
+  
+
+  const cookieStore = cookies()
+
+const cookieHeader = (await cookieStore)
+  .getAll()
+  .map((c) => `${c.name}=${c.value}`)
+  .join("; ")
+
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/routes`, {
-    credentials: "include",
+    headers: {
+      Cookie: cookieHeader,
+    },
     cache: "no-store",
   })
 
   if (!res.ok) return []
 
-  return res.json()
+  const data = await res.json()
+
+  return Array.isArray(data)
+    ? data
+    : Array.isArray(data?.items)
+    ? data.items
+    : []
 }
 
 export default async function EndpointsPage() {
@@ -128,13 +148,7 @@ export default async function EndpointsPage() {
                     View Events
                   </Link>
 
-                  <button
-                    onClick={() => navigator.clipboard.writeText(url)}
-                    className="flex items-center gap-1 text-sm bg-primary text-primary-foreground px-3 py-1.5 rounded-md hover:bg-primary/90 transition-colors"
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                    Copy
-                  </button>
+                  <CopyButton text={url} />
 
                 </div>
               </div>

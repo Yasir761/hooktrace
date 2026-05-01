@@ -78,11 +78,14 @@ export default function RoutesPage() {
 
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-semibold">Webhook Routes</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Manage your relay endpoints
-        </p>
-      </div>
+  <h1 className="text-3xl font-semibold">Advanced Endpoints</h1>
+  <p className="text-muted-foreground text-sm mt-1">
+    Create custom webhook endpoints or manage routes created by integrations
+  </p>
+</div>
+<p className="text-xs text-muted-foreground">
+  Example: order.created, user.signup, payment.failed
+</p>
 
       {/* Create Route */}
       <div className="flex gap-3">

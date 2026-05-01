@@ -212,3 +212,32 @@ async def relay(token: str, route: str, request: Request):
 
     finally:
         db.close()
+
+
+
+@router.post("/webhook/{token}", status_code=status.HTTP_202_ACCEPTED)
+async def integration_webhook(token: str, request: Request):
+    db: Session = SessionLocal()
+
+    try:
+        route_config = db.execute(
+            text("""
+                SELECT id, route
+                FROM webhook_routes
+                WHERE token = :token
+                LIMIT 1
+            """),
+            {"token": token},
+        ).mappings().first()
+
+        if not route_config:
+            return JSONResponse(
+                status_code=404,
+                content={"detail": "Webhook not found"},
+            )
+
+        # forward internally to relay
+        return await relay(token, route_config["route"], request)
+
+    finally:
+        db.close()
