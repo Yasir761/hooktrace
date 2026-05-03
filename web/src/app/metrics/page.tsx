@@ -5,7 +5,7 @@ import { promRangeQuery } from "@/lib/prometheus"
 import MetricsClient from "./metrics-client"
 
 export default async function MetricsPage() {
-  try {
+  
     const latency = await promRangeQuery(
       "histogram_quantile(0.95, rate(hooktrace_delivery_latency_seconds_bucket[5m])) or vector(0)"
     )
@@ -40,7 +40,4 @@ export default async function MetricsPage() {
         failed={failed || []}
       />
     )
-  } catch (e) {
-    return <div className="p-6">Failed to load metrics</div>
-  }
 }
