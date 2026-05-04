@@ -185,8 +185,6 @@ export default async function Dashboard() {
       failureSeries={parsedFailure}
       dlqCount={dlqCount}
       integrations={integrations}
-
-      lastFailure={null}
       latency={0}
       
     />
