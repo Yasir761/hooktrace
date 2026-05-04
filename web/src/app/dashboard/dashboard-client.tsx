@@ -1738,7 +1738,6 @@
 
 
 
-
 "use client"
 
 import Link from "next/link"
@@ -1759,10 +1758,7 @@ import {
 
 /* ---------------- TYPES ---------------- */
 
-type Stat = {
-  label: string
-  value: number
-}
+type Stat = { label: string; value: number }
 
 type Event = {
   id: number
@@ -1804,45 +1800,25 @@ export default function DashboardClient({
   latency: number
   lastFailure?: Event | null
 }) {
-  /* ---------------- BASE STATS ---------------- */
-
   const incoming = stats.find(s => s.label === "Total Events")?.value || 0
   const delivered = stats.find(s => s.label === "Delivered")?.value || 0
   const failed = stats.find(s => s.label === "Failed")?.value || 0
   const retries = stats.find(s => s.label === "Retries")?.value || 0
 
-  /* ---------------- LIVE EVENTS ---------------- */
-
   const liveEvents = useWebhookStream("/ws/events")
 
-  /* ---------------- MERGE EVENTS ---------------- */
-
-  const mergedEvents = [
-    ...liveEvents,
-    ...(recentEvents || []),
-  ]
-    .filter(
-      (e, i, arr) => arr.findIndex(x => x.id === e.id) === i // dedupe
-    )
+  const mergedEvents = [...liveEvents, ...(recentEvents || [])]
+    .filter((e, i, arr) => arr.findIndex(x => x.id === e.id) === i)
     .slice(0, 10)
 
-  /* ---------------- LIVE STATS ---------------- */
-
-  const liveDelivered = liveEvents.filter(e => e.status === "delivered").length
-  const liveFailed = liveEvents.filter(e => e.status === "failed").length
-
   const incomingLive = incoming + liveEvents.length
-  const deliveredLive = delivered + liveDelivered
-  const failedLive = failed + liveFailed
+  const deliveredLive = delivered + liveEvents.filter(e => e.status === "delivered").length
+  const failedLive = failed + liveEvents.filter(e => e.status === "failed").length
 
   const successRate =
     incomingLive > 0 ? (deliveredLive / incomingLive) * 100 : 100
 
   const isHealthy = successRate > 95 && dlqCount === 0
-
-  const hasLiveFailures = liveEvents.some(e => e.status === "failed")
-
-  /* ---------------- CHART ---------------- */
 
   const chartData = successSeries.map((s, i) => ({
     time: new Date(s[0] * 1000).toLocaleTimeString(),
@@ -1850,18 +1826,26 @@ export default function DashboardClient({
     failure: Number(failureSeries[i]?.[1] || 0),
   }))
 
-  /* ---------------- UI ---------------- */
-
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen relative overflow-hidden bg-background">
+
+      {/* 🔥 Gradient Background */}
+      <div className="absolute inset-0 -z-10">
+        <div className="absolute top-[-200px] left-[-200px] w-[500px] h-[500px] bg-purple-500/20 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[-200px] right-[-200px] w-[500px] h-[500px] bg-blue-500/20 blur-[120px] rounded-full" />
+      </div>
+
       <div className="mx-auto max-w-7xl px-6 py-10 space-y-8">
 
         {/* ================= STATUS ================= */}
-        <div
-          className={`rounded-xl p-4 flex justify-between items-center border
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`
+            rounded-xl p-4 flex justify-between items-center border backdrop-blur-xl
             ${isHealthy
-              ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-              : "bg-red-50 border-red-200 text-red-700"}
+              ? "bg-emerald-500/10 border-emerald-400/30 text-emerald-400"
+              : "bg-red-500/10 border-red-400/30 text-red-400"}
           `}
         >
           <div className="flex items-center gap-2 text-sm font-medium">
@@ -1878,17 +1862,17 @@ export default function DashboardClient({
             )}
           </div>
 
-          <div className="flex items-center gap-4 text-sm">
-            <span>{successRate.toFixed(1)}% success</span>
-            <span>{latency}ms latency</span>
+          <div className="flex items-center gap-6 text-sm">
+            <span>{successRate.toFixed(1)}%</span>
+            <span>{latency}ms</span>
 
-            {/* LIVE indicator */}
-            <div className="flex items-center gap-1 text-xs">
-              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+            {/* LIVE glow */}
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.8)]" />
               Live
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* ================= METRICS ================= */}
         <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
@@ -1901,56 +1885,38 @@ export default function DashboardClient({
             { label: "Endpoints", value: endpoints?.length || 0 },
             { label: "Integrations", value: integrations?.length || 0 },
           ].map((stat) => (
-            <div
+            <motion.div
               key={stat.label}
-              className="rounded-lg border bg-card p-4"
+              whileHover={{ scale: 1.03 }}
+              className="rounded-xl border bg-white/5 dark:bg-white/5 backdrop-blur-xl p-4 shadow-sm"
             >
               <p className="text-xs text-muted-foreground">
                 {stat.label}
               </p>
-              <p className="text-xl font-bold">
+              <p className="text-xl font-bold mt-1">
                 {stat.value}
               </p>
-            </div>
+            </motion.div>
           ))}
         </div>
 
-        {/* ================= SUCCESS BAR ================= */}
-        <div className="rounded-xl border bg-card p-6">
-          <div className="flex justify-between text-sm mb-2">
-            <span>Success Rate</span>
-            <span>{successRate.toFixed(1)}%</span>
-          </div>
-
-          <div className="w-full bg-muted rounded-full h-2">
-            <div
-              className="bg-emerald-500 h-2 rounded-full"
-              style={{ width: `${successRate}%` }}
-            />
-          </div>
-        </div>
-
         {/* ================= CHART ================= */}
-        <div className="rounded-xl border bg-card p-6">
-          <div className="flex justify-between mb-4">
-            <h2 className="font-semibold">Activity</h2>
-            <div className="flex gap-3 text-xs">
-              <span className="text-emerald-600">● Success</span>
-              <span className="text-red-500">● Failed</span>
-            </div>
-          </div>
+        <div className="rounded-xl border bg-white/5 backdrop-blur-xl p-6">
+          <h2 className="font-semibold mb-4">Activity</h2>
 
           <div className="h-[320px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
                 <XAxis dataKey="time" />
                 <Tooltip />
+
                 <Line
                   type="monotone"
                   dataKey="success"
                   stroke="#22c55e"
                   strokeWidth={2}
                 />
+
                 <Line
                   type="monotone"
                   dataKey="failure"
@@ -1963,36 +1929,25 @@ export default function DashboardClient({
         </div>
 
         {/* ================= ALERTS ================= */}
-        {(dlqCount > 0 || failedLive > 0 || hasLiveFailures) && (
-          <div className="rounded-xl border bg-card p-6 space-y-2">
-            <h2 className="font-semibold">Alerts</h2>
+        {(dlqCount > 0 || failedLive > 0) && (
+          <div className="rounded-xl border bg-red-500/10 border-red-400/30 backdrop-blur-xl p-6">
+            <h2 className="font-semibold mb-2 text-red-400">Alerts</h2>
 
             {dlqCount > 0 && (
-              <p className="text-sm text-red-500">
-                ⚠️ {dlqCount} events in DLQ
-              </p>
+              <p className="text-sm">⚠ {dlqCount} events in DLQ</p>
             )}
 
-            {(failedLive > 0 || hasLiveFailures) && (
-              <p className="text-sm text-red-500">
-                ⚠️ Failures detected in real-time
-              </p>
-            )}
-
-            {lastFailure && (
-              <p className="text-xs text-muted-foreground">
-                Last failure:{" "}
-                {new Date(lastFailure.created_at).toLocaleTimeString()}
-              </p>
+            {failedLive > 0 && (
+              <p className="text-sm">⚠ Failures detected</p>
             )}
           </div>
         )}
 
-        {/* ================= LOWER GRID ================= */}
+        {/* ================= LOWER ================= */}
         <div className="grid md:grid-cols-2 gap-6">
 
           {/* EVENTS */}
-          <div className="rounded-xl border bg-card p-6">
+          <div className="rounded-xl border bg-white/5 backdrop-blur-xl p-6">
             <div className="flex justify-between mb-4">
               <h2 className="font-semibold">Recent Events</h2>
               <Link href="/events" className="text-sm text-primary">
@@ -2001,28 +1956,16 @@ export default function DashboardClient({
             </div>
 
             <div className="space-y-3">
-              {mergedEvents.length === 0 && (
-                <p className="text-sm text-muted-foreground">
-                  No events yet
-                </p>
-              )}
-
               {mergedEvents.map((event) => (
-                <div
-                  key={event.id}
-                  className="flex justify-between text-sm"
-                >
+                <div key={event.id} className="flex justify-between text-sm">
                   <div className="flex items-center gap-2">
                     {event.status === "delivered" && (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                     )}
                     {event.status === "failed" && (
-                      <XCircle className="w-4 h-4 text-red-500" />
+                      <XCircle className="w-4 h-4 text-red-400" />
                     )}
-
-                    <span>
-                      #{event.id} {event.provider || ""}
-                    </span>
+                    <span>#{event.id} {event.provider}</span>
                   </div>
 
                   <span className="text-xs text-muted-foreground">
@@ -2034,7 +1977,7 @@ export default function DashboardClient({
           </div>
 
           {/* ENDPOINTS */}
-          <div className="rounded-xl border bg-card p-6">
+          <div className="rounded-xl border bg-white/5 backdrop-blur-xl p-6">
             <div className="flex justify-between mb-4">
               <h2 className="font-semibold">Endpoints</h2>
               <Link href="/endpoints" className="text-sm text-primary">
@@ -2044,10 +1987,7 @@ export default function DashboardClient({
 
             <div className="space-y-2 text-sm">
               {(endpoints || []).slice(0, 6).map((ep) => (
-                <div
-                  key={ep.id}
-                  className="flex justify-between"
-                >
+                <div key={ep.id} className="flex justify-between">
                   <span>{ep.route}</span>
                   <span className="text-muted-foreground">
                     {ep.mode}
@@ -2058,6 +1998,7 @@ export default function DashboardClient({
           </div>
 
         </div>
+
       </div>
     </div>
   )
