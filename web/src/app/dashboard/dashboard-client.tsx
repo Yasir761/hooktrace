@@ -2091,7 +2091,7 @@ export default function DashboardClient({
 }) {
   const [isLive, setIsLive] = useState(true)
 
-  const liveEvents = useWebhookStream(isLive ? "/ws/events" : null)
+  const liveEvents = useWebhookStream("/ws/events")
 
   /* ---------------- Derived ---------------- */
 
@@ -2100,15 +2100,22 @@ export default function DashboardClient({
   const failed = stats.find(s => s.label === "Failed")?.value || 0
   const retries = stats.find(s => s.label === "Retries")?.value || 0
 
-  const mergedEvents = [...liveEvents, ...(recentEvents || [])]
+  const mergedEvents = [
+    ...(isLive ? liveEvents : []),
+    ...(recentEvents || []),
+  ]
     .filter((e, i, arr) => arr.findIndex(x => x.id === e.id) === i)
     .slice(0, 10)
 
-  const incomingLive = incoming + liveEvents.length
-  const deliveredLive =
-    delivered + liveEvents.filter(e => e.status === "delivered").length
-  const failedLive =
-    failed + liveEvents.filter(e => e.status === "failed").length
+    const incomingLive = incoming + (isLive ? liveEvents.length : 0)
+
+    const deliveredLive =
+      delivered +
+      (isLive ? liveEvents.filter(e => e.status === "delivered").length : 0)
+    
+    const failedLive =
+      failed +
+      (isLive ? liveEvents.filter(e => e.status === "failed").length : 0)
 
   const successRate =
     incomingLive > 0 ? (deliveredLive / incomingLive) * 100 : 100
