@@ -246,32 +246,275 @@
 
 
 
-from typing import List, Dict, Any
+# import asyncio
+# from typing import List, Dict, Any
+# from sqlalchemy import text
+# import json
+
+# from .database import SessionLocal
+
+
+
+
+
+
+# async def execute_with_retry(worker, config, payload):
+#     max_retries = config.get("retries", 2)
+#     delay = 0.5  # seconds (base)
+
+#     attempt = 0
+
+#     while attempt <= max_retries:
+#         try:
+#             result = await worker(config, payload)
+
+#             # success condition
+#             if result.get("status_code") and 200 <= result["status_code"] < 300:
+#                 return result, attempt + 1, True
+
+#             # treat non-2xx as failure
+#             raise Exception(f"HTTP {result.get('status_code')}")
+
+#         except Exception as e:
+#             if attempt == max_retries:
+#                 return {
+#                     "status_code": None,
+#                     "error": str(e)
+#                 }, attempt + 1, False
+
+#             # exponential backoff
+#             await asyncio.sleep(delay * (2 ** attempt))
+#             attempt += 1
+
+# class DeliveryTargetsRouter:
+
+#     def __init__(self):
+#         self.worker = {}
+#         self._load_worker()
+
+#     def _load_worker(self):
+#         from services.worker.delivery.http import deliver_http
+#         from services.worker.delivery.sqs import deliver_sqs
+#         from services.worker.delivery.kafka import deliver_kafka
+#         from services.worker.delivery.rabbitmq import deliver_rabbitmq
+#         from services.worker.delivery.redis import deliver_redis
+#         from services.worker.delivery.grpc import deliver_grpc
+#         from services.worker.delivery.slack import deliver_slack
+#         from services.worker.delivery.email import deliver_email
+
+#         self.worker = {
+#             "http": asyncio.to_thread(deliver_http),
+#             "sqs": asyncio.to_thread(deliver_sqs),
+#             "kafka": asyncio.to_thread(deliver_kafka),
+#             "rabbitmq": asyncio.to_thread(deliver_rabbitmq),
+#             "redis": asyncio.to_thread(deliver_redis),
+#             "grpc": asyncio.to_thread(deliver_grpc),
+#             "slack": asyncio.to_thread(deliver_slack),
+#             "email": asyncio.to_thread(deliver_email),
+#         }
+
+#     def get_active_targets(self, user_id: str, provider: str = None):
+#         db = SessionLocal()
+#         try:
+#             rows = db.execute(
+#                 text("""
+#                     SELECT id, type, config, providers
+#                     FROM delivery_targets
+#                     WHERE user_id = :user_id
+#                     AND enabled = TRUE
+#                 """),
+#                 {"user_id": user_id}
+#             ).fetchall()
+
+#             targets = []
+
+#             for row in rows:
+#                 config = row[2]
+#                 providers = row[3]
+
+#                 if isinstance(config, str):
+#                     config = json.loads(config or "{}")
+
+#                 if isinstance(providers, str):
+#                     providers = json.loads(providers or "[]")
+
+#                 if not providers:
+#                     providers = []
+
+#                 if not providers or not provider or provider in providers:
+#                     targets.append({
+#                         "id": str(row[0]),
+#                         "type": row[1],
+#                         "config": config,
+#                     })
+
+#             return targets
+
+#         finally:
+#             db.close()
+
+#     async def deliver_webhook(self, user_id: str, webhook_data: Dict[str, Any], provider: str = None, target_id=None):
+#         targets = self.get_active_targets(user_id, provider)
+#         if target_id:
+#            targets = [t for t in targets if t["id"] == target_id]
+
+#         results = {
+#             "total_targets": len(targets),
+#             "successful": 0,
+#             "failed": 0,
+#             "details": []
+#         }
+
+#         if not targets:
+#             return results
+
+#         for target in targets: 
+#             target_id = target["id"]
+#             target_type = target["type"]
+#             config = target["config"]
+
+#             worker = self.worker.get(target_type)
+
+#             if not worker:
+#                 results["failed"] += 1
+#                 continue
+
+#             #  execute + catch errors
+#             try:
+#                 result, attempts, success =  await execute_with_retry(worker,config,webhook_data)
+#                 status = "success" if success else "failed"
+#             except Exception as e:
+#                 result = {
+#                     "status_code": None,
+#                     "error": str(e)
+#                 }
+#                 status = "failed"
+#                 success = False
+
+#             #  update stats
+#             await self._update_target_stats(target_id, success)
+
+#             #  log delivery
+#             db = SessionLocal()
+#             try:
+#                 db.execute(
+#                     text("""
+#                         INSERT INTO delivery_logs (
+#                             target_id,
+#                             event_id,
+#                             status,
+#                             status_code,
+#                             response,
+#                             attempt,
+#                             created_at
+#                         )
+#                         VALUES (:target_id, :event_id, :status, :status_code, :response, :attempt, NOW())
+#                     """),
+#                     {
+#                         "target_id": target_id,
+#                         "event_id": webhook_data.get("id"),
+#                         "status": status,
+#                         "status_code": result.get("status_code"),
+#                         "response": json.dumps(result),
+#                         "attempt": attempts
+#                     }
+#                 )
+#                 db.commit()
+#             finally:
+#                 db.close()
+
+#             #  result summary
+#             if success:
+#                 results["successful"] += 1
+#             else:
+#                 results["failed"] += 1
+
+#             results["details"].append({
+#                 "target_id": target_id,
+#                 "target_type": target_type,
+#                 "success": success,
+#                 "result": result
+#             })
+
+#         return results
+
+#     async def _update_target_stats(self, target_id: str, success: bool):
+#         db = SessionLocal()
+#         try:
+#             if success:
+#                 db.execute(
+#                     text("""
+#                         UPDATE delivery_targets
+#                         SET success_count = success_count + 1,
+#                             last_used = CURRENT_TIMESTAMP
+#                         WHERE id = :id
+#                     """),
+#                     {"id": target_id}
+#                 )
+#             else:
+#                 db.execute(
+#                     text("""
+#                         UPDATE delivery_targets
+#                         SET error_count = error_count + 1,
+#                             last_used = CURRENT_TIMESTAMP
+#                         WHERE id = :id
+#                     """),
+#                     {"id": target_id}
+#                 )
+#             db.commit()
+#         finally:
+#             db.close()
+
+
+# delivery_router = DeliveryTargetsRouter()
+
+
+# async def route_webhook_to_targets(user_id, webhook_data, provider=None, target_id=None):
+#     return await delivery_router.deliver_webhook(
+#         user_id,
+#         webhook_data,
+#         provider,
+#         target_id
+#     )
+
+
+
+
+
+
+
+
+
+
+import asyncio
+from typing import Dict, Any
 from sqlalchemy import text
 import json
 
 from .database import SessionLocal
 
 
-
-
-import time
-
-def execute_with_retry(worker, config, payload):
+async def execute_with_retry(worker, config, payload):
     max_retries = config.get("retries", 2)
-    delay = 0.5  # seconds (base)
+    delay = 0.5
 
     attempt = 0
 
     while attempt <= max_retries:
         try:
-            result = worker(config, payload)
+            result = await asyncio.wait_for(
+                asyncio.to_thread(
+                    worker,
+                    config,
+                    payload
+                ),
+                timeout=config.get("timeout", 10)
+            )
 
             # success condition
             if result.get("status_code") and 200 <= result["status_code"] < 300:
                 return result, attempt + 1, True
 
-            # treat non-2xx as failure
             raise Exception(f"HTTP {result.get('status_code')}")
 
         except Exception as e:
@@ -281,9 +524,9 @@ def execute_with_retry(worker, config, payload):
                     "error": str(e)
                 }, attempt + 1, False
 
-            # exponential backoff
-            time.sleep(delay * (2 ** attempt))
+            await asyncio.sleep(delay * (2 ** attempt))
             attempt += 1
+
 
 class DeliveryTargetsRouter:
 
@@ -314,6 +557,7 @@ class DeliveryTargetsRouter:
 
     def get_active_targets(self, user_id: str, provider: str = None):
         db = SessionLocal()
+
         try:
             rows = db.execute(
                 text("""
@@ -352,10 +596,111 @@ class DeliveryTargetsRouter:
         finally:
             db.close()
 
-    def deliver_webhook(self, user_id: str, webhook_data: Dict[str, Any], provider: str = None, target_id=None):
+    async def _deliver_target(
+        self,
+        target,
+        webhook_data
+    ):
+        target_id = target["id"]
+        target_type = target["type"]
+        config = target["config"]
+
+        worker = self.worker.get(target_type)
+
+        if not worker:
+            return {
+                "target_id": target_id,
+                "target_type": target_type,
+                "success": False,
+                "result": {
+                    "error": f"No worker found for type: {target_type}"
+                }
+            }
+
+        try:
+            result, attempts, success = await execute_with_retry(
+                worker,
+                config,
+                webhook_data
+            )
+
+            status = "success" if success else "failed"
+
+        except Exception as e:
+            result = {
+                "status_code": None,
+                "error": str(e)
+            }
+
+            status = "failed"
+            success = False
+            attempts = 0
+
+        db = SessionLocal()
+
+        try:
+            # update stats
+            await self._update_target_stats(
+                db,
+                target_id,
+                success
+            )
+
+            # log delivery
+            db.execute(
+                text("""
+                    INSERT INTO delivery_logs (
+                        target_id,
+                        event_id,
+                        status,
+                        status_code,
+                        response,
+                        attempt,
+                        created_at
+                    )
+                    VALUES (
+                        :target_id,
+                        :event_id,
+                        :status,
+                        :status_code,
+                        :response,
+                        :attempt,
+                        NOW()
+                    )
+                """),
+                {
+                    "target_id": target_id,
+                    "event_id": webhook_data.get("id"),
+                    "status": status,
+                    "status_code": result.get("status_code"),
+                    "response": json.dumps(result),
+                    "attempt": attempts
+                }
+            )
+
+            db.commit()
+
+        finally:
+            db.close()
+
+        return {
+            "target_id": target_id,
+            "target_type": target_type,
+            "success": success,
+            "result": result
+        }
+
+    async def deliver_webhook(
+        self,
+        user_id: str,
+        webhook_data: Dict[str, Any],
+        provider: str = None,
+        target_id=None
+    ):
         targets = self.get_active_targets(user_id, provider)
+
         if target_id:
-           targets = [t for t in targets if t["id"] == target_id]
+            targets = [t for t in targets if t["id"] == target_id]
 
         results = {
             "total_targets": len(targets),
@@ -367,109 +712,61 @@ class DeliveryTargetsRouter:
         if not targets:
             return results
 
-        for target in targets:
-            target_id = target["id"]
-            target_type = target["type"]
-            config = target["config"]
+        tasks = [
+            self._deliver_target(target, webhook_data)
+            for target in targets
+        ]
 
-            worker = self.worker.get(target_type)
+        delivery_results = await asyncio.gather(*tasks)
 
-            if not worker:
-                results["failed"] += 1
-                continue
-
-            #  execute + catch errors
-            try:
-                result, attempts, success = execute_with_retry(worker,config,webhook_data)
-                status = "success" if success else "failed"
-            except Exception as e:
-                result = {
-                    "status_code": None,
-                    "error": str(e)
-                }
-                status = "failed"
-                success = False
-
-            #  update stats
-            self._update_target_stats(target_id, success)
-
-            #  log delivery
-            db = SessionLocal()
-            try:
-                db.execute(
-                    text("""
-                        INSERT INTO delivery_logs (
-                            target_id,
-                            event_id,
-                            status,
-                            status_code,
-                            response,
-                            attempt,
-                            created_at
-                        )
-                        VALUES (:target_id, :status, :status_code, :event_id, :response, :attempt, NOW())
-                    """),
-                    {
-                        "target_id": target_id,
-                        "event_id": webhook_data.get("id"),
-                        "status": status,
-                        "status_code": result.get("status_code"),
-                        "response": json.dumps(result),
-                        "attempt": attempts
-                    }
-                )
-                db.commit()
-            finally:
-                db.close()
-
-            #  result summary
-            if success:
+        for result in delivery_results:
+            if result["success"]:
                 results["successful"] += 1
             else:
                 results["failed"] += 1
 
-            results["details"].append({
-                "target_id": target_id,
-                "target_type": target_type,
-                "success": success,
-                "result": result
-            })
+            results["details"].append(result)
 
         return results
 
-    def _update_target_stats(self, target_id: str, success: bool):
-        db = SessionLocal()
-        try:
-            if success:
-                db.execute(
-                    text("""
-                        UPDATE delivery_targets
-                        SET success_count = success_count + 1,
-                            last_used = CURRENT_TIMESTAMP
-                        WHERE id = :id
-                    """),
-                    {"id": target_id}
-                )
-            else:
-                db.execute(
-                    text("""
-                        UPDATE delivery_targets
-                        SET error_count = error_count + 1,
-                            last_used = CURRENT_TIMESTAMP
-                        WHERE id = :id
-                    """),
-                    {"id": target_id}
-                )
-            db.commit()
-        finally:
-            db.close()
+    async def _update_target_stats(
+        self,
+        db,
+        target_id: str,
+        success: bool
+    ):
+        if success:
+            db.execute(
+                text("""
+                    UPDATE delivery_targets
+                    SET success_count = success_count + 1,
+                        last_used = CURRENT_TIMESTAMP
+                    WHERE id = :id
+                """),
+                {"id": target_id}
+            )
+        else:
+            db.execute(
+                text("""
+                    UPDATE delivery_targets
+                    SET error_count = error_count + 1,
+                        last_used = CURRENT_TIMESTAMP
+                    WHERE id = :id
+                """),
+                {"id": target_id}
+            )
 
 
 delivery_router = DeliveryTargetsRouter()
 
 
-def route_webhook_to_targets(user_id, webhook_data, provider=None, target_id=None):
-    return delivery_router.deliver_webhook(
+async def route_webhook_to_targets(
+    user_id,
+    webhook_data,
+    provider=None,
+    target_id=None
+):
+    return await delivery_router.deliver_webhook(
         user_id,
         webhook_data,
         provider,

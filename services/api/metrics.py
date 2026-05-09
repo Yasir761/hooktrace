@@ -1,9 +1,10 @@
 from prometheus_client import Counter
 
+
 webhooks_received = Counter(
     "hooktrace_webhooks_received_total",
     "Total number of webhooks received",
-    ["token", "route"]
+    ["provider", "route"]
 )
 
 webhooks_deduplicated = Counter(

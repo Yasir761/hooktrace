@@ -731,44 +731,44 @@ def delete_aggregation_rule(
         db.close()
 
 
-@router.post("/{rule_id}/stats/increment")
-def increment_rule_stats(
-    rule_id: str,
-    event_count: int = 1,
-    batch_created: bool = False,
-    duplicates: int = 0,
-):
-    db = SessionLocal()
-    try:
-        updates = ["events_processed = events_processed + :event_count"]
-        params = {
-            "id": rule_id,
-            "event_count": event_count,
-            "duplicates": duplicates,
-        }
+# @router.post("/{rule_id}/stats/increment")
+# def increment_rule_stats(
+#     rule_id: str,
+#     event_count: int = 1,
+#     batch_created: bool = False,
+#     duplicates: int = 0,
+# ):
+#     db = SessionLocal()
+#     try:
+#         updates = ["events_processed = events_processed + :event_count"]
+#         params = {
+#             "id": rule_id,
+#             "event_count": event_count,
+#             "duplicates": duplicates,
+#         }
 
-        if batch_created:
-            updates.append("batches_created = batches_created + 1")
+#         if batch_created:
+#             updates.append("batches_created = batches_created + 1")
 
-        if duplicates > 0:
-            updates.append("duplicates_skipped = duplicates_skipped + :duplicates")
+#         if duplicates > 0:
+#             updates.append("duplicates_skipped = duplicates_skipped + :duplicates")
 
-        updates.append("last_triggered = CURRENT_TIMESTAMP")
+#         updates.append("last_triggered = CURRENT_TIMESTAMP")
 
-        query = f"""
-            UPDATE aggregation_rules
-            SET {', '.join(updates)}
-            WHERE id = :id
-        """
+#         query = f"""
+#             UPDATE aggregation_rules
+#             SET {', '.join(updates)}
+#             WHERE id = :id
+#         """
 
-        db.execute(text(query), params)
-        db.commit()
+#         db.execute(text(query), params)
+#         db.commit()
 
-        return {"success": True}
+#         return {"success": True}
 
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
+#     except Exception as e:
+#         db.rollback()
+#         raise HTTPException(status_code=400, detail=str(e))
 
-    finally:
-        db.close()
+#     finally:
+#         db.close()

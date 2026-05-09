@@ -154,12 +154,14 @@ from .replay import router as replay_router
 from .events import router as events_router
 from .delivery_targets import router as delivery_targets_router
 from .route_management import router as routes_management_router
-from .webhooks import router as webhooks_router
+# from .webhooks import router as webhooks_router
 from .tunnels import router as tunnels_router
 from .auth import router as auth_router
 from .aggregation import router as aggregation_router
 from .usage import router as usage_router
 from .integrations import router as integrations_router
+from .tunnels import router as tunnel_gateway_router
+from .tunnels import router as tunnel_proxy_router
 
 # Websocket
 from .ws import manager
@@ -211,11 +213,17 @@ app.include_router(replay_router)
 app.include_router(events_router)
 app.include_router(usage_router)
 app.include_router(delivery_targets_router)
-app.include_router(webhooks_router)
+# app.include_router(webhooks_router)
 app.include_router(tunnels_router)
 app.include_router(aggregation_router)
 app.include_router(integrations_router)
+app.include_router(
+    tunnel_gateway_router
+)
 
+app.include_router(
+    tunnel_proxy_router
+)
 
 
 # -----------------------------

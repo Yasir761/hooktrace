@@ -73,26 +73,34 @@
 
 
 
+from pickle import GET
 from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import text
 from .database import SessionLocal
 from services.shared.redis_client import redis_client
+from fastapi import Depends
+from .auth import get_current_user
 
 router = APIRouter(prefix="/events", tags=["replay"])
-QUEUE_MAIN = "webhook:queue"
+QUEUE_MAIN = "webhook:ingress"
 
 
 @router.post("/{event_id}/replay", status_code=status.HTTP_202_ACCEPTED)
-def replay_event(event_id: int):
+def replay_event(event_id: int ,user_id: str = Depends(get_current_user)
+    ):
     db = SessionLocal()
     try:
         event = db.execute(
             text("""
-                SELECT id
-                FROM webhook_events
-                WHERE id = :id
+                SELECT e.id
+FROM webhook_events e
+JOIN webhook_routes r
+    ON e.route_id = r.id
+WHERE e.id = :id
+AND r.user_id = :user_id
             """),
-            {"id": event_id},
+            {"id": event_id,
+            "user_id":user_id},
         ).mappings().first()
 
         if not event:
@@ -104,7 +112,6 @@ def replay_event(event_id: int):
                 UPDATE webhook_events
                 SET
                     status = 'pending',
-                    attempt_count = 0,
                     last_error = NULL,
                     next_retry_at = NULL
                 WHERE id = :id
