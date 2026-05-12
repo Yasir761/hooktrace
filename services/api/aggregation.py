@@ -415,11 +415,11 @@
 
 
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Literal
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import text
 import json
 
@@ -434,14 +434,37 @@ router = APIRouter(prefix="/aggregation", tags=["aggregation"])
 # -----------------------------
 
 class AggregationConfig(BaseModel):
-    mode: str
-    windowMs: Optional[int] = None
-    maxBatchSize: Optional[int] = 100
-    timeoutMs: Optional[int] = None
-    maxEventsPerSecond: Optional[int] = None
-    deduplicate: Optional[bool] = False
-    deduplicationKey: Optional[str] = None
 
+    mode: Literal[
+        "batch",
+        "window",
+        "rate_limit",
+    ]
+
+    windowMs: Optional[int] = Field(
+        default=None,
+        ge=1,
+    )
+
+    maxBatchSize: Optional[int] = Field(
+        default=100,
+        ge=1,
+        le=10000,
+    )
+
+    timeoutMs: Optional[int] = Field(
+        default=None,
+        ge=1,
+    )
+
+    maxEventsPerSecond: Optional[int] = Field(
+        default=None,
+        ge=1,
+    )
+
+    deduplicate: Optional[bool] = False
+
+    deduplicationKey: Optional[str] = None
 
 class CreateAggregationRuleRequest(BaseModel):
     name: str

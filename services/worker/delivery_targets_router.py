@@ -1,9 +1,9 @@
 
 
-# """
-# Routes incoming webhooks to configured delivery targets
-# Integrates with your existing delivery worker
-# """
+"""
+Routes incoming webhooks to configured delivery targets
+Integrates with your existing delivery worker
+"""
 
 # from typing import List, Dict, Any
 # from datetime import datetime
