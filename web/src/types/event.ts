@@ -1,4 +1,5 @@
 export type Event = {
+    payload: {}
     id: number
     route: string
     provider?: string

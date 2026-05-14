@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic"
 import { redirect } from "next/navigation"
 import { promQuery, getScalar } from "@/lib/prometheus"
 import { getCurrentUser } from "@/lib/auth"
-import DashboardClient from "@/app/dashboard/dashboard-client"
+import DashboardClient from "@/app/(dashboard)/dashboard-client"
 
 /* ---------------- Types ---------------- */
 
